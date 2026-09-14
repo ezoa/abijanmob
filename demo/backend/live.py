@@ -8,12 +8,13 @@ Modèle : une petite flotte par ligne informelle (2–3 véhicules espacés rég
 cohérent avec la fréquence annoncée du corpus). Les conducteurs du corpus sont rattachés
 au véhicule n°0 de leur ligne (leur « position partagée »).
 """
+
 from __future__ import annotations
 
 from datetime import datetime
 
-SIM_FACTOR = 4            # accélération temporelle (démo)
-TERMINAL_WAIT_MIN = 2.0   # pause à chaque terminus, en minutes simulées
+SIM_FACTOR = 4  # accélération temporelle (démo)
+TERMINAL_WAIT_MIN = 2.0  # pause à chaque terminus, en minutes simulées
 FLEET_MIN, FLEET_MAX = 2, 3
 EPOCH = datetime(2026, 9, 14, 6, 0, 0)  # époque fixe => trajectoires continues
 
@@ -21,8 +22,8 @@ EPOCH = datetime(2026, 9, 14, 6, 0, 0)  # époque fixe => trajectoires continues
 class LiveTracker:
     def __init__(self, network):
         self.net = network
-        self.fleet: dict[str, list[float]] = {}       # line_id -> décalages de phase (min)
-        self.line_driver: dict[str, dict] = {}        # line_id -> conducteur (véhicule n°0)
+        self.fleet: dict[str, list[float]] = {}  # line_id -> décalages de phase (min)
+        self.line_driver: dict[str, dict] = {}  # line_id -> conducteur (véhicule n°0)
         for d in network.drivers.values():
             self.line_driver[d["line_id"]] = d
         for ln in network.lines.values():

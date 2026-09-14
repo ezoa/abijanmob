@@ -1,9 +1,13 @@
 # Démo AbidjanMob — lancement complet en une commande :
-#   docker compose up --build
+#   docker compose up --build        (ou : make up)
 #   → Interface : http://localhost:8080   · API : http://localhost:8000/docs
 #
-# tiles-init (one-shot) récupère les tuiles OpenStreetMap manquantes dans
-# ./demo/frontend/public/tiles (idempotent : ne retélécharge rien si déjà là).
+# Services :
+#   api        — FastAPI (moteur d'itinéraires, paiements simulés, flotte en direct)
+#   nginx      — point d'entrée web : sert le frontend construit + proxifie /api
+#                (étape finale de demo/frontend/Dockerfile : image nginx:1.27-alpine)
+#   tiles-init — one-shot : récupère les tuiles OSM manquantes dans
+#                ./demo/frontend/public/tiles (idempotent)
 # NB : utiliser docker OU demo/demo.sh, pas les deux en même temps (port 8000).
 services:
   api:
@@ -14,7 +18,7 @@ services:
       - "8000:8000"
     restart: unless-stopped
 
-  web:
+  nginx:
     build:
       context: .
       dockerfile: demo/frontend/Dockerfile

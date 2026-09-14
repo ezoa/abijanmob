@@ -225,3 +225,35 @@ Demande utilisateur : « how to test ». Ajouté :
    **Résultat : 8/8 OK sur les deux chemins** (API directe :8000 et proxy nginx :8080)
 2. ✅ README : section « Comment tester » (test auto, parcours manuel en 8 clics,
    variantes, robustesse/plan B, comportements normaux)
+
+## Makefile + qualité Python + nginx explicite (14/09, soirée)
+
+Demandes utilisateur : Makefile de gestion, lint + black, et nginx visible dans le
+compose. Linter choisi : **ruff** (validé par l'utilisateur).
+
+### Étapes
+
+1. ✅ `Makefile` racine : `help · up · down · build · restart · logs · ps · demo ·
+   smoke · smoke-nginx · tiles · deps-dev · lint · lint-fix · format · format-check`
+2. ✅ `pyproject.toml` : black + ruff (line-length 100, règles E4/E7/E9/F/I)
+3. ✅ `demo/backend/requirements-dev.txt` : ruff + black (séparé des deps prod)
+4. ✅ Service compose `web` renommé **`nginx`** — il s'agissait déjà de nginx
+   (image finale du Dockerfile frontend) ; le renommage le rend visible dans
+   `docker compose ps` et le compose documente chaque service
+5. ✅ Passage de `make lint-fix` : imports triés (1 correctif auto) + renommage
+   des variables `l` → `leg` (11× E741 « nom ambigu ») ; `make format` : 4 fichiers
+   reformatés par black
+
+### Incident détecté et corrigé
+
+Le renommage du service a laissé l'ancien conteneur `abidjanmod-web-1` **orphelin**,
+qui conservait le port 8080 bloqué (`docker compose down` ne supprime pas les orphelins
+par défaut). Corrigé : `--remove-orphans` ajouté aux cibles `down` et `restart` du
+Makefile.
+
+### Vérifications
+
+- `make lint` : **All checks passed** ✓ · `make format-check` : 4 fichiers conformes ✓
+- `make restart` : stack redémarrée proprement — `abidjanmod-nginx-1` actif sur :8080
+- `make smoke` : **8/8 OK** ✓ · `make smoke-nginx` : **8/8 OK** ✓ (le backend reformaté
+  n'a aucun impact fonctionnel)

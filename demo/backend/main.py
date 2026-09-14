@@ -2,6 +2,7 @@
 
 Paiements SIMULÉS (mock) : aucun argent réel, aucun appel PSP externe.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -9,10 +10,13 @@ from datetime import datetime
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-
-from routing_engine import CORPUS_PATH, MODES, get_network  # noqa: F401 (CORPUS_PATH réexporté pour les tests)
 from live import LiveTracker
+from pydantic import BaseModel
+from routing_engine import (  # noqa: F401 (CORPUS_PATH réexporté pour les tests)
+    CORPUS_PATH,
+    MODES,
+    get_network,
+)
 
 app = FastAPI(title="AbidjanMob API — prototype de démo", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -32,10 +36,18 @@ driver_line = net.lines[driver["line_id"]]
 
 # Recettes du jour pré-remplies pour la démonstration (matinée du conducteur).
 SEED_RECEIPTS = [
-    ("07:05", 400, "wave"), ("07:12", 400, "orange"), ("07:19", 300, "wave"),
-    ("07:26", 400, "wave"), ("07:41", 400, "mtn"), ("07:55", 300, "orange"),
-    ("08:03", 400, "wave"), ("08:17", 400, "moov"), ("08:31", 300, "wave"),
-    ("08:44", 400, "orange"), ("08:58", 400, "wave"), ("09:13", 300, "mtn"),
+    ("07:05", 400, "wave"),
+    ("07:12", 400, "orange"),
+    ("07:19", 300, "wave"),
+    ("07:26", 400, "wave"),
+    ("07:41", 400, "mtn"),
+    ("07:55", 300, "orange"),
+    ("08:03", 400, "wave"),
+    ("08:17", 400, "moov"),
+    ("08:31", 300, "wave"),
+    ("08:44", 400, "orange"),
+    ("08:58", 400, "wave"),
+    ("09:13", 300, "mtn"),
 ]
 live_receipts: list[dict] = []
 
@@ -55,7 +67,11 @@ class PaymentRequest(BaseModel):
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "abidjanmob-demo", "time": datetime.now().isoformat(timespec="seconds")}
+    return {
+        "status": "ok",
+        "service": "abidjanmob-demo",
+        "time": datetime.now().isoformat(timespec="seconds"),
+    }
 
 
 @app.get("/api/meta")
@@ -133,11 +149,23 @@ def receipts(driver_id: str):
         raise HTTPException(status_code=404, detail="Conducteur inconnu")
     d = net.drivers[driver_id]
     seeded = [
-        {"time_hm": hm, "fare": fare, "provider": PROVIDERS[p], "line_name": driver_line["name"], "mode": driver_line["mode"]}
+        {
+            "time_hm": hm,
+            "fare": fare,
+            "provider": PROVIDERS[p],
+            "line_name": driver_line["name"],
+            "mode": driver_line["mode"],
+        }
         for hm, fare, p in SEED_RECEIPTS
     ]
     live = [
-        {"time_hm": r["time_hm"], "fare": r["fare"], "provider": r["provider"], "line_name": r["line_name"], "mode": r["mode"]}
+        {
+            "time_hm": r["time_hm"],
+            "fare": r["fare"],
+            "provider": r["provider"],
+            "line_name": r["line_name"],
+            "mode": r["mode"],
+        }
         for r in live_receipts
         if r["driver_id"] == driver_id
     ]
@@ -147,7 +175,12 @@ def receipts(driver_id: str):
     for r in all_receipts:
         by_provider[r["provider"]] = by_provider.get(r["provider"], 0) + r["fare"]
     return {
-        "driver": {"id": d["id"], "name": d["name"], "vehicle": d["vehicle"], "line": driver_line["name"]},
+        "driver": {
+            "id": d["id"],
+            "name": d["name"],
+            "vehicle": d["vehicle"],
+            "line": driver_line["name"],
+        },
         "date": datetime.now().strftime("%d/%m/%Y"),
         "count": len(all_receipts),
         "total": total,

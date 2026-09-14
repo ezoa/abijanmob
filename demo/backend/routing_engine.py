@@ -5,6 +5,7 @@ Graphe léger : correspondances à pied entre arrêts proches, lignes bidirectio
 Dijkstra multi-passes (rapide / économique / formel / informel), puis comparaison taxi
 et marche. Les données proviennent de data/corpus/network.json (indicatives).
 """
+
 from __future__ import annotations
 
 import heapq
@@ -106,7 +107,7 @@ class Network:
         while heap:
             pri, _, t, stop, legs, fare, used = heapq.heappop(heap)
             if stop in dest_stops:
-                return [dict(l) for l in legs[1:]]  # drop fictitious start leg
+                return [dict(leg) for leg in legs[1:]]  # drop fictitious start leg
             if pri > best.get(stop, math.inf):
                 continue
             best[stop] = pri
@@ -138,11 +139,24 @@ class Network:
                         "fare": ln["fare"],
                         "headway_min": ln["headway_min"],
                     }
-                    heapq.heappush(heap, (arr + fare_weight * new_fare, next(tick), arr, ln["stops"][j], legs + (leg,), new_fare, used | {ln["id"]}))
+                    heapq.heappush(
+                        heap,
+                        (
+                            arr + fare_weight * new_fare,
+                            next(tick),
+                            arr,
+                            ln["stops"][j],
+                            legs + (leg,),
+                            new_fare,
+                            used | {ln["id"]},
+                        ),
+                    )
             for b, d, m in self.walk_edges[stop]:
                 arr = t + m
                 leg = {"type": "walk", "from": stop, "to": b, "min": _round(m, 1), "m": _round(d)}
-                heapq.heappush(heap, (arr + fare_weight * fare, next(tick), arr, b, legs + (leg,), fare, used))
+                heapq.heappush(
+                    heap, (arr + fare_weight * fare, next(tick), arr, b, legs + (leg,), fare, used)
+                )
         return None
 
     # ------------------------------------------------------------- assemblage
@@ -152,7 +166,12 @@ class Network:
         for leg in legs:
             if leg["type"] == "walk" and leg["min"] == 0 and leg["m"] == 0:
                 continue
-            if leg["type"] == "walk" and out and out[-1]["type"] == "walk" and out[-1]["to"] == leg["from"]:
+            if (
+                leg["type"] == "walk"
+                and out
+                and out[-1]["type"] == "walk"
+                and out[-1]["to"] == leg["from"]
+            ):
                 out[-1]["to"] = leg["to"]
                 out[-1]["min"] = _round(out[-1]["min"] + leg["min"], 1)
                 out[-1]["m"] = _round(out[-1]["m"] + leg["m"])
@@ -161,19 +180,24 @@ class Network:
         return out
 
     def _summarize(self, o_poi: dict, d_poi: dict, legs: list[dict]) -> dict:
-        rides = [l for l in legs if l["type"] == "ride"]
-        walk_m = sum(l["m"] for l in legs if l["type"] == "walk")
-        total = sum((l["wait_min"] + l["ride_min"]) if l["type"] == "ride" else l["min"] for l in legs)
-        fare = sum(l["fare"] for l in rides)
-        transit_km = sum(l["m"] for l in rides) / 1000.0
-        names = " · ".join(l["line_name"] for l in rides) or "À pied"
+        rides = [leg for leg in legs if leg["type"] == "ride"]
+        walk_m = sum(leg["m"] for leg in legs if leg["type"] == "walk")
+        total = sum(
+            (leg["wait_min"] + leg["ride_min"]) if leg["type"] == "ride" else leg["min"]
+            for leg in legs
+        )
+        fare = sum(leg["fare"] for leg in rides)
+        transit_km = sum(leg["m"] for leg in rides) / 1000.0
+        names = " · ".join(leg["line_name"] for leg in rides) or "À pied"
         return {
             "legs": legs,
             "total_min": _round(total, 1),
             "fare": fare,
             "walk_m": _round(walk_m),
             "transfers": max(0, len(rides) - 1),
-            "co2_saved_g": _round(max(0.0, transit_km * (CO2_TAXI_G_PER_KM - CO2_TRANSIT_G_PER_KM))),
+            "co2_saved_g": _round(
+                max(0.0, transit_km * (CO2_TAXI_G_PER_KM - CO2_TRANSIT_G_PER_KM))
+            ),
             "summary": f"{names} — {_round(total)} min · {fare} FCFA",
         }
 
@@ -210,7 +234,13 @@ class Network:
         dist_m = haversine_m(o_stop, d_stop) * DETOUR
         if dist_m > WALK_ONLY_MAX_M:
             return None
-        leg = {"type": "walk", "from": o_stop["id"], "to": d_stop["id"], "min": _round(walk_min(dist_m), 1), "m": _round(dist_m)}
+        leg = {
+            "type": "walk",
+            "from": o_stop["id"],
+            "to": d_stop["id"],
+            "min": _round(walk_min(dist_m), 1),
+            "m": _round(dist_m),
+        }
         return {
             "legs": [leg],
             "total_min": _round(walk_min(dist_m), 1),
@@ -243,7 +273,7 @@ class Network:
             if not legs:
                 continue
             it = self._summarize(o_poi, d_poi, self._merge_walks(legs))
-            sig = tuple(l.get("line_id") for l in it["legs"] if l["type"] == "ride")
+            sig = tuple(leg.get("line_id") for leg in it["legs"] if leg["type"] == "ride")
             if sig in seen:
                 continue
             seen.add(sig)
@@ -260,10 +290,10 @@ class Network:
             if cheapest is not kept[0]:
                 cheapest["tag"] = "Le moins cher"
         for it in kept:
-            rides = [l for l in it["legs"] if l["type"] == "ride"]
-            if rides and all(MODES[l["mode"]]["formal"] for l in rides):
+            rides = [leg for leg in it["legs"] if leg["type"] == "ride"]
+            if rides and all(MODES[leg["mode"]]["formal"] for leg in rides):
                 it.setdefault("tag", "Réseau formel")
-            elif rides and all(not MODES[l["mode"]]["formal"] for l in rides):
+            elif rides and all(not MODES[leg["mode"]]["formal"] for leg in rides):
                 it.setdefault("tag", "Réseau informel")
 
         extras = [self._taxi_itinerary(o_stop, d_stop)]
@@ -286,7 +316,12 @@ class Network:
             {
                 "type": "Feature",
                 "geometry": {"type": "Point", "coordinates": [s["lon"], s["lat"]]},
-                "properties": {"id": s["id"], "name": s["name"], "commune": s["commune"], "kind": s["kind"]},
+                "properties": {
+                    "id": s["id"],
+                    "name": s["name"],
+                    "commune": s["commune"],
+                    "kind": s["kind"],
+                },
             }
             for s in self.stops.values()
         ]

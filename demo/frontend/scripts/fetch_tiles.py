@@ -3,6 +3,7 @@
 
 Usage prototype (volume léger, une seule fois) — fond de carte © OpenStreetMap contributors.
 """
+
 import math
 import os
 import sys

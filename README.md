@@ -27,7 +27,7 @@ abidjanmod/
 ### Option A — Docker (recommandé)
 
 ```bash
-docker compose up --build
+docker compose up --build     # ou simplement : make up
 ```
 
 - Interface : **http://localhost:8080** · API (docs Swagger) : http://localhost:8000/docs
@@ -43,8 +43,25 @@ bash demo/demo.sh
 
 - Interface : **http://127.0.0.1:4173** · API : http://127.0.0.1:8000/docs
 
-> ⚠️ Un mode à la fois : le port 8000 est partagé. Faire `docker compose down` avant
-> `demo.sh`, et inversement.
+> ⚠️ Un mode à la fois : le port 8000 est partagé. Faire `make down` avant `make demo`,
+> et inversement.
+
+### Commandes rapides (Makefile)
+
+```bash
+make help          # liste complète
+make up            # démarre la stack docker (api + nginx + tiles)
+make down          # arrête la stack
+make restart       # down + up
+make logs          # suit les logs
+make smoke         # test de fumée (:8000)   · make smoke-nginx (:8080)
+make lint          # lint Python (ruff)      · make lint-fix (corrections auto)
+make format        # formatage Python (black) · make format-check (vérif seule)
+make demo          # mode local sans docker (demo/demo.sh)
+```
+
+Qualité : config `pyproject.toml` (ruff + black, line-length 100) · dépendances de
+développement : `demo/backend/requirements-dev.txt` (`make deps-dev` les installe).
 
 ## Comment tester
 
