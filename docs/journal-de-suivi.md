@@ -106,3 +106,34 @@ la démo, même un problème de driver graphique ne tuera pas la présentation.
   « ce qui est réel / ce qui est simulé »)
 - Revue visuelle par l'équipe + répétition, corrections éventuelles
 - Commit final + tag
+
+## J3 (partiel, 14/09 au soir) — finalisation
+
+1. ✅ Tuiles : **433/433 récupérées, 0 erreur, 11 Mo** ; rebuild → tuiles servies
+   depuis `dist/` (vérifié `curl` sur z11/z12/z15 : 200, PNG réels de 29–36 Ko)
+2. ✅ `docs/scénario-démo.md` : script de présentation 7–10 min (accroche, pilier
+   information, pilier paiement, boucle données, conclusion), tableau de questions
+   probables du jury avec réponses, plan B hors-ligne
+3. ✅ README : instructions de lancement + scénario conseillé
+4. ✅ Nettoyage : `package-lock.json` parasite à la racine supprimé (résidu du premier
+   `npm install` lancé dans le mauvais répertoire)
+
+### Livrables finaux de la démo
+
+| Livrable | Emplacement |
+|---|---|
+| Application démo | `demo/frontend/` (React + MapLibre) — http://127.0.0.1:4173 |
+| API + moteur d'itinéraires | `demo/backend/` (FastAPI) — http://127.0.0.1:8000/docs |
+| Corpus pilote (indicatif) | `data/corpus/network.json` |
+| Lancement 1 commande | `bash demo/demo.sh` |
+| Plan MVP 6 mois | `docs/plan-mvp.md` |
+| Script jury | `docs/scénario-démo.md` |
+| Journal de suivi | `docs/journal-de-suivi.md` (ce fichier) |
+
+### À faire par l'équipe avant le jour J
+
+- Ouvrir http://127.0.0.1:4173 et **dérouler le scénario complet au moins 2 fois**
+- Ajuster si besoin : textes, tarifs du corpus, couleurs
+- Préparer les captures d'écran de secours (cf. §7 du scénario)
+- Décider : présentation sur cet ordinateur ou un autre (si autre → `git clone` +
+  `bash demo/demo.sh`, prévoir ~10 min d'installation + tuiles)
