@@ -178,3 +178,40 @@ Demande utilisateur : pouvoir lancer la démo avec docker-compose. Plan complet 
 | http://localhost:8080 | nginx (docker) — mode recommandé |
 | http://127.0.0.1:4173 | preview Vite local (proxy vers l'API sur 8000) |
 | http://localhost:8000/docs | API Swagger (conteneur docker) |
+
+## Suivi en direct des véhicules (14/09, soirée)
+
+Demande utilisateur : tracer le déplacement du chauffeur et partager sa position pour
+éviter de faire attendre l'autre. Plan complet validé avant implémentation.
+
+### Étapes
+
+1. ✅ `demo/backend/live.py` — simulation **déterministe sur l'horloge** (pas de thread :
+   fonction pure du temps, époque fixe → trajectoires continues, robustes aux redémarrages).
+   Temps accéléré ×4 (mention affichée à l'écran), pauses aux terminus, allers-retours.
+2. ✅ **Modèle flotte** : 2–3 véhicules par ligne informelle (25 véhicules au total),
+   espacés selon la fréquence du corpus — les ETA sont cohérentes avec les
+   « départs ~ toutes les X min » affichés. Les 3 conducteurs du corpus (Koffi, Mariam,
+   Yao) sont rattachés au véhicule n°0 de leur ligne.
+   *Correction en cours de route : la 1re version (1 véhicule/ligne) donnait des ETA
+   de ~30 min, incohérentes avec les fréquences affichées — remplacée avant le frontend.*
+3. ✅ Endpoints : `GET /api/drivers/live` (positions de la flotte),
+   `GET /api/lines/{id}/eta?stop_id=` (prochains passages),
+   `GET /api/driver/{id}/position` (position partagée d'un conducteur)
+4. ✅ Frontend : marqueurs 🚐🚕 animés (halo pulsant, couleur par mode) sur toutes les
+   cartes, polling 2 s ; chips « 🔴 … arrive à … dans ~X min · puis ~Y min » sur les
+   itinéraires informels et sur le billet ; carte « 📍 Position partagée » + mini-carte
+   dans le mode conducteur
+5. ✅ Dockerfile backend : `live.py` ajouté au COPY (oubli détecté via les logs du
+   conteneur au premier rebuild)
+6. ✅ Scénario jury : nouvelle étape « Suivi en direct », durée 8–11 min, ligne Q&A
+   « positions réelles ? »
+
+### Vérifications
+
+- `GET /api/drivers/live` : 25 véhicules, positions distinctes, directions cohérentes
+- Mouvement confirmé : **24/25 véhicules déplacés en 4 s** (le 25e en pause à un terminus)
+- `GET /api/lines/wo_riviera/eta?stop_id=st_riviera2` → `eta_min: 1.0, eta2_min: 7.3` ✓
+- Rendu headless : 25 marqueurs `.vhc` présents sur l'accueil (localhost:4173 ET
+  docker :8080), légende « Véhicules en direct » ✓
+- Conteneurs api + web reconstruits, stack complète opérationnelle sur :8080

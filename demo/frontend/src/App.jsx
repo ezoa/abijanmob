@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getJSON, postJSON } from './api.js'
+import { useVehicles } from './live.js'
 import Logo from './components/Logo.jsx'
 import PhoneFrame from './components/PhoneFrame.jsx'
 import HomeView from './components/HomeView.jsx'
@@ -17,6 +18,7 @@ export default function App() {
   const [selected, setSelected] = useState(null)
   const [ticket, setTicket] = useState(null)
   const [fullscreen, setFullscreen] = useState(false)
+  const vehicles = useVehicles()
 
   useEffect(() => {
     getJSON('/api/pois').then(setPois).catch(() => {})
@@ -78,7 +80,7 @@ export default function App() {
 
       <main className="stage">
         <PhoneFrame fullscreen={fullscreen}>
-          {view === 'home' && <HomeView pois={pois} network={network} onSearch={search} />}
+          {view === 'home' && <HomeView pois={pois} network={network} vehicles={vehicles} onSearch={search} />}
           {view === 'results' && plan && (
             <ResultsView
               plan={plan}
@@ -91,6 +93,7 @@ export default function App() {
               onBack={() => setView('home')}
               stopMap={stopMap}
               network={network}
+              vehicles={vehicles}
             />
           )}
           {view === 'pay' && selected && (
@@ -107,6 +110,8 @@ export default function App() {
             <TicketView
               ticket={ticket}
               itinerary={selected}
+              vehicles={vehicles}
+              stopMap={stopMap}
               onHome={() => setView('home')}
               onDriver={() => {
                 setReturnTo('ticket')
@@ -114,7 +119,9 @@ export default function App() {
               }}
             />
           )}
-          {view === 'driver' && <DriverView onBack={toggleDriver} />}
+          {view === 'driver' && (
+            <DriverView onBack={toggleDriver} network={network} vehicles={vehicles} />
+          )}
         </PhoneFrame>
       </main>
 

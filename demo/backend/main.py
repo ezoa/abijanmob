@@ -12,11 +12,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from routing_engine import CORPUS_PATH, MODES, get_network  # noqa: F401 (CORPUS_PATH réexporté pour les tests)
+from live import LiveTracker
 
 app = FastAPI(title="AbidjanMob API — prototype de démo", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 net = get_network()
+tracker = LiveTracker(net)
 
 PROVIDERS = {
     "wave": "Wave",
@@ -102,6 +104,27 @@ def pay(req: PaymentRequest):
     }
     live_receipts.append(ticket)
     return ticket
+
+
+@app.get("/api/drivers/live")
+def drivers_live():
+    return tracker.all_positions()
+
+
+@app.get("/api/driver/{driver_id}/position")
+def driver_position(driver_id: str):
+    try:
+        return tracker.driver_state(driver_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Conducteur inconnu")
+
+
+@app.get("/api/lines/{line_id}/eta")
+def line_eta(line_id: str, stop_id: str):
+    try:
+        return tracker.line_eta(line_id, stop_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Ligne ou arrêt inconnu")
 
 
 @app.get("/api/driver/{driver_id}/receipts")

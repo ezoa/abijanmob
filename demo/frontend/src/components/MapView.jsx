@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import { MODE_ICONS } from '../api.js'
 
 const stopCoord = (network, id) => {
   const f = network?.stops.features.find((x) => x.properties.id === id)
@@ -77,35 +78,39 @@ function clearLayers(map, ids) {
   }
 }
 
-export default function MapView({ network, itinerary, plan, dim = false }) {
+export default function MapView({ network, itinerary, plan, vehicles, dim = false }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const renderRef = useRef(() => {})
+  const vehicleSyncRef = useRef(() => {})
   const markersRef = useRef([])
+  const vehicleMarkersRef = useRef({})
   const [mapFailed, setMapFailed] = useState(false)
   const dataRef = useRef({ network, itinerary, plan, dim })
   dataRef.current = { network, itinerary, plan, dim }
+  const vehiclesRef = useRef(vehicles)
+  vehiclesRef.current = vehicles
 
   useEffect(() => {
     let map
     try {
       map = new maplibregl.Map({
-      container: containerRef.current,
-      style: {
-        version: 8,
-        sources: {
-          osm: {
-            type: 'raster',
-            tiles: ['/tiles/{z}/{x}/{y}.png'],
-            tileSize: 256,
-            attribution: '© OpenStreetMap contributors',
+        container: containerRef.current,
+        style: {
+          version: 8,
+          sources: {
+            osm: {
+              type: 'raster',
+              tiles: ['/tiles/{z}/{x}/{y}.png'],
+              tileSize: 256,
+              attribution: '© OpenStreetMap contributors',
+            },
           },
+          layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
         },
-        layers: [{ id: 'osm', type: 'raster', source: 'osm' }],
-      },
-      center: [-4.0, 5.335],
-      zoom: 11.2,
-    })
+        center: [-4.0, 5.335],
+        zoom: 11.2,
+      })
     } catch (e) {
       // WebGL indisponible (driver, machine virtuelle…) : l'app reste utilisable sans carte.
       setMapFailed(true)
@@ -202,8 +207,39 @@ export default function MapView({ network, itinerary, plan, dim = false }) {
     }
     renderRef.current = render
 
+    const syncVehicles = () => {
+      const list = vehiclesRef.current || []
+      const seen = new Set()
+      for (const v of list) {
+        seen.add(v.vehicle_id)
+        let m = vehicleMarkersRef.current[v.vehicle_id]
+        const title = v.driver_name
+          ? `${v.driver_name} · ${v.line_name} · ${v.dir_label}`
+          : `${v.line_name} · ${v.dir_label}`
+        if (!m) {
+          const el = document.createElement('div')
+          el.className = `vhc vhc-${v.mode}`
+          el.innerHTML = `<span class="vhc-pulse"></span><span class="vhc-ico">${MODE_ICONS[v.mode] || '🚐'}</span>`
+          el.title = title
+          m = new maplibregl.Marker({ element: el }).setLngLat([v.lon, v.lat]).addTo(map)
+          vehicleMarkersRef.current[v.vehicle_id] = m
+        } else {
+          m.setLngLat([v.lon, v.lat])
+          m.getElement().title = title
+        }
+      }
+      for (const id of Object.keys(vehicleMarkersRef.current)) {
+        if (!seen.has(id)) {
+          vehicleMarkersRef.current[id].remove()
+          delete vehicleMarkersRef.current[id]
+        }
+      }
+    }
+    vehicleSyncRef.current = syncVehicles
+
     map.on('load', () => {
       render()
+      syncVehicles()
       map.on('click', 'net-lines', (e) => {
         const f = e.features[0]
         new maplibregl.Popup({ closeButton: false })
@@ -219,6 +255,8 @@ export default function MapView({ network, itinerary, plan, dim = false }) {
 
     return () => {
       markersRef.current.forEach((m) => m.remove())
+      Object.values(vehicleMarkersRef.current).forEach((m) => m.remove())
+      vehicleMarkersRef.current = {}
       map.remove()
     }
   }, [])
@@ -229,6 +267,10 @@ export default function MapView({ network, itinerary, plan, dim = false }) {
     if (map.isStyleLoaded()) renderRef.current()
     else map.once('load', renderRef.current)
   }, [network, itinerary, plan, dim])
+
+  useEffect(() => {
+    if (mapRef.current) vehicleSyncRef.current()
+  }, [vehicles])
 
   if (mapFailed) {
     return (

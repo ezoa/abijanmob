@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import MapView from './MapView.jsx'
 import { fmtF, getJSON } from '../api.js'
 
 const PROVIDER_COLORS = {
@@ -8,7 +9,7 @@ const PROVIDER_COLORS = {
   'Moov Money': '#0066B3',
 }
 
-export default function DriverView({ onBack }) {
+export default function DriverView({ onBack, network, vehicles }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(false)
 
@@ -29,6 +30,7 @@ export default function DriverView({ onBack }) {
   if (error && !data) return <div className="driver-load">Connexion à l'API impossible…</div>
   if (!data) return <div className="driver-load">Chargement…</div>
 
+  const me = (vehicles || []).find((v) => v.driver_id === 'drv_001')
   const maxProv = Math.max(1, ...Object.values(data.by_provider || {}))
 
   return (
@@ -55,6 +57,24 @@ export default function DriverView({ onBack }) {
           </div>
         </div>
       </div>
+
+      {me && (
+        <div className="drv-pos">
+          <div>
+            <div className="drv-pos-title">📍 Position partagée en direct</div>
+            <div className="drv-pos-dir">
+              {me.line_name} · {me.dir_label}
+            </div>
+          </div>
+          <div className="drv-map">
+            <MapView network={network} vehicles={vehicles} dim />
+          </div>
+          <div className="drv-pos-note">
+            Les usagers voient votre véhicule arriver sur leur carte et savent quand se
+            présenter à l'arrêt — moins d'attente dans les deux sens.
+          </div>
+        </div>
+      )}
 
       <div className="drv-stats">
         <div className="stat stat-main">

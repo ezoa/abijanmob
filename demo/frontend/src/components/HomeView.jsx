@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import MapView from './MapView.jsx'
 import { MODE_ICONS } from '../api.js'
 
-export default function HomeView({ pois, network, onSearch }) {
+export default function HomeView({ pois, network, vehicles, onSearch }) {
   const [from, setFrom] = useState('riviera2')
   const [to, setTo] = useState('cite_administrative')
   const [busy, setBusy] = useState(false)
@@ -97,7 +97,7 @@ export default function HomeView({ pois, network, onSearch }) {
       </button>
 
       <div className="home-map">
-        <MapView network={network} />
+        <MapView network={network} vehicles={vehicles} />
         <div className="map-legend">
           {[
             ['gbaka', 'Gbakas'],
@@ -109,6 +109,7 @@ export default function HomeView({ pois, network, onSearch }) {
               {MODE_ICONS[m]} {label}
             </span>
           ))}
+          <span title="Simulation accélérée ×4 pour la démonstration">🔴 Véhicules en direct (×4)</span>
         </div>
       </div>
     </div>

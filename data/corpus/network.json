@@ -58,6 +58,8 @@
     {"id": "siporex", "label": "Yopougon Siporex", "commune": "Yopougon", "stop_id": "st_yopougon_siporex"}
   ],
   "drivers": [
-    {"id": "drv_001", "name": "Koffi Assamoi", "vehicle": "Gbaka — immatriculation prototype", "line_id": "gb_riviera_adjamme"}
+    {"id": "drv_001", "name": "Koffi Assamoi", "vehicle": "Gbaka — immatriculation prototype", "line_id": "gb_riviera_adjamme"},
+    {"id": "drv_002", "name": "Mariam Koné", "vehicle": "Woro-woro — immatriculation prototype", "line_id": "wo_riviera"},
+    {"id": "drv_003", "name": "Yao Brou", "vehicle": "Woro-woro — immatriculation prototype", "line_id": "wo_plateau"}
   ]
 }

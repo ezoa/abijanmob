@@ -1065,6 +1065,111 @@ body {
   border-radius: 50%;
 }
 
+/* ------------------------------ suivi en direct ------------------------------ */
+.vhc {
+  position: relative;
+  width: 30px;
+  height: 30px;
+}
+.vhc-ico {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #fff;
+  border-radius: 50%;
+  font-size: 15px;
+  border: 2px solid #e63946;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  z-index: 2;
+}
+.vhc-pulse {
+  position: absolute;
+  inset: -7px;
+  border-radius: 50%;
+  border: 2px solid #e63946;
+  animation: vhcpulse 1.8s ease-out infinite;
+  z-index: 1;
+}
+.vhc-woro .vhc-pulse,
+.vhc-woro .vhc-ico {
+  border-color: #f4a261;
+}
+.vhc-sotra .vhc-pulse,
+.vhc-sotra .vhc-ico {
+  border-color: #2a9d8f;
+}
+.vhc-bateau .vhc-pulse,
+.vhc-bateau .vhc-ico {
+  border-color: #457b9d;
+}
+@keyframes vhcpulse {
+  0% {
+    transform: scale(0.55);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+.live-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fdecea;
+  border: 1px solid #f2b8b5;
+  color: #9c2b24;
+  border-radius: 10px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.live-next {
+  color: #c47a75;
+  font-weight: 600;
+}
+.live-dot2 {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #e63946;
+  animation: pulse 1.4s infinite;
+  flex: none;
+}
+.drv-pos {
+  margin: 4px 16px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.drv-pos-title {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--navy);
+}
+.drv-pos-dir {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.drv-map {
+  height: 170px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+.drv-pos-note {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
 @media (max-width: 720px) {
   .phone {
     width: 100vw;
