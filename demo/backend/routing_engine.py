@@ -299,6 +299,7 @@ class Network:
                 "color": MODES[ln["mode"]]["color"],
                 "fare": ln["fare"],
                 "headway_min": ln["headway_min"],
+                "stops": ln["stops"],
                 "coords": [[self.stops[sid]["lat"], self.stops[sid]["lon"]] for sid in ln["stops"]],
             }
             for ln in self.lines.values()

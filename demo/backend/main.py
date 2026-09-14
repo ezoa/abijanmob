@@ -11,7 +11,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from routing_engine import CORPUS_PATH, MODES, get_network
+from routing_engine import CORPUS_PATH, MODES, get_network  # noqa: F401 (CORPUS_PATH réexporté pour les tests)
 
 app = FastAPI(title="AbidjanMob API — prototype de démo", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])

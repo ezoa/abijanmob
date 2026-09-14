@@ -24,6 +24,19 @@ abidjanmod/
 
 ## Lancer la démo
 
-(en cours d'élaboration — script `demo.sh` livré le jour 3)
+```bash
+bash demo/demo.sh
+```
+
+Puis ouvrir **http://127.0.0.1:4173** dans un navigateur.
+
+- Premier lancement : installe les dépendances et récupère les tuiles de carte (~4 min).
+- Lancements suivants : démarrage en quelques secondes, **fonctionne hors-ligne**
+  (tuiles en cache local, aucun service externe requis).
+- API (docs Swagger) : http://127.0.0.1:8000/docs
+
+Scénario conseillé : bouton « ⚡ Trajet démo » → comparer les options formel/informel/taxi →
+« Payer ce trajet » → QR conducteur → opérateur mobile money → code (4 chiffres quelconque) →
+billet numérique → « Mode conducteur » pour voir la recette arriver en direct.
 
 Fond de carte : © OpenStreetMap contributors.

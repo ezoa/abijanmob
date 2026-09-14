@@ -65,3 +65,44 @@ comparaison formel/informel — cœur de la proposition — est désormais toujo
 - J2 : application web React (carte MapLibre, recherche, itinéraires, flux paiement,
   dashboard conducteur, branding), tuiles OSM mises en cache pour la démo hors-ligne
 - J3 : tests de bout en bout, `scénario-démo.md`, script de lancement `demo.sh`, répétition
+
+## J2 — (suite de la journée du 14/09)
+
+### Étapes réalisées
+
+1. ✅ Application React (Vite) complète : `demo/frontend/` — 14 fichiers
+   - Accueil (recherche POI par commune, trajet démo présélectionné)
+   - Résultats (carte + options formel/informel/taxi, tags, détails des étapes, CO₂)
+   - Paiement simulé 4 étapes : scan QR conducteur → choix PSP (Wave/Orange/MTN/Moov) →
+     écran PSP + code → débit → billet numérique avec QR
+   - Mode conducteur : recettes du jour, répartition PSP, rafraîchissement 4 s
+   - Branding placeholder (logo SVG, orange/vert/navy), cadre smartphone + plein écran
+2. ✅ Backend : ajout des identifiants d'arrêts dans `/api/network` (tracé des itinéraires)
+3. ✅ `npm install` (105 paquets) + `npm run build` — **compilation OK**
+4. ✅ Script `demo.sh` (lancement complet en une commande)
+5. ✅ Script `scripts/fetch_tiles.py` : mise en cache locale des tuiles OSM
+   (z10–14 Grand Abidjan + z15 corridor) pour une démo **hors-ligne**
+
+### Problème détecté et corrigé (important pour le jour J)
+
+Capture headless Chrome : **MapLibre plantait toute l'app** si WebGL est indisponible
+(exception non catchée → écran blanc). Corrigé : `try/catch` autour de l'init carte +
+fallback « carte indisponible, itinéraires et paiement restent accessibles ». Le jour de
+la démo, même un problème de driver graphique ne tuera pas la présentation.
+
+### Vérifications J2
+
+- `npm run build` : ✓ 45 modules, 1,6 s
+- `curl http://127.0.0.1:4173/` : 200 ✓
+- Rendu headless Chrome (`--dump-dom`) : « Où allez-vous », options POI « Riviera 2 »,
+  « Cité Administrative », « Trajet démo », « Mode conducteur » présents ✓
+- `<canvas>` présent (carte initialisée en WebGL logiciel) ✓
+- Tuiles : 433 attendues, téléchargement en cours (0 erreur au pointage)
+
+### Reste à faire (J3)
+
+- Rebuild final avec tuiles complètes + capture d'écran de contrôle
+- `docs/scénario-démo.md` (script de présentation pour le jury, avec transparent
+  « ce qui est réel / ce qui est simulé »)
+- Revue visuelle par l'équipe + répétition, corrections éventuelles
+- Commit final + tag
