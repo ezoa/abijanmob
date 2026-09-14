@@ -76,8 +76,23 @@ if docker compose exec -T db pg_isready -U abidjanmob -d abidjanmob >/dev/null 2
     "SELECT count(*) FROM ridership_events" 2>/dev/null)
   [ "${n:-0}" -ge 100000 ]
   check "Base analytics peuplée (${n} événements de fréquentation)" $?
+
+  mb=$(curl -s -m 5 http://localhost:3000/api/health 2>/dev/null || true)
+  if [ -n "$mb" ]; then
+    echo "$mb" | grep -q '"ok"'
+    check "Metabase en ligne (:3000)" $?
+    su=$(curl -s -m 5 http://localhost:3000/api/session/properties 2>/dev/null | \
+      grep -o '"has-user-setup":[a-z]*' | cut -d: -f2)
+    if [ "$su" = "false" ]; then
+      echo "ℹ Metabase : configuration initiale à faire (http://localhost:3000 — cf. docs/dashboards-metabase.md)"
+    else
+      check "Metabase configuré (admin + base connectée)" 0
+    fi
+  else
+    check "Metabase en ligne (:3000)" 1
+  fi
 else
-  echo "ℹ Base analytics : ignorée (stack docker absente — mode local)"
+  echo "ℹ Base analytics / Metabase : ignorés (stack docker absente — mode local)"
 fi
 
 echo

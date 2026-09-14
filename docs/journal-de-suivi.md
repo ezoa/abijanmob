@@ -300,3 +300,11 @@ plus robuste, sans parsing de nom.
 - Metabase : HTTP 200 sur :3000 ✓
 - `make lint` / `make format-check` : conformes ✓ (6 fichiers Python)
 - `make smoke` : **9/9 OK** ✓ · `make smoke-nginx` : **9/9 OK** ✓
+
+### Extension (même soirée) — test automatique de Metabase
+
+- `make smoke` passe à **10 vérifications** : `GET :3000/api/health` (service en ligne)
+  + `has-user-setup` via `/api/session/properties` — tant que la configuration
+  initiale n'est pas faite, le test affiche un rappel au lieu d'un échec ; une fois
+  l'admin créé et la base connectée, il affiche « Metabase configuré ».
+- Vérifié : **10/10 OK** (avec rappel « configuration initiale à faire » — attendu)
