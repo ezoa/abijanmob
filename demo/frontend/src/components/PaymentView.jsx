@@ -35,6 +35,8 @@ export default function PaymentView({ itinerary, onDone, onCancel }) {
         fare: itinerary.fare,
         provider: provider.key,
         driver_id: 'drv_001',
+        line_id: lines[0]?.line_id,
+        stop_id: lines[0]?.from,
       })
       onDone(ticket)
     } catch (e) {

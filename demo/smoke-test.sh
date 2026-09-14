@@ -71,6 +71,15 @@ total=$(curl -sf "$API/api/driver/drv_001/receipts" |
 [ "${total:-0}" -ge 4400 ]
 check "Dashboard conducteur (recettes du jour : ${total} F)" $?
 
+if docker compose exec -T db pg_isready -U abidjanmob -d abidjanmob >/dev/null 2>&1; then
+  n=$(docker compose exec -T db psql -U abidjanmob -d abidjanmob -tAc \
+    "SELECT count(*) FROM ridership_events" 2>/dev/null)
+  [ "${n:-0}" -ge 100000 ]
+  check "Base analytics peuplée (${n} événements de fréquentation)" $?
+else
+  echo "ℹ Base analytics : ignorée (stack docker absente — mode local)"
+fi
+
 echo
 if [ "$fail" -eq 0 ]; then
   echo "Résultat : $pass/$pass tests OK ✅"

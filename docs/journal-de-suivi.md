@@ -257,3 +257,46 @@ Makefile.
 - `make restart` : stack redémarrée proprement — `abidjanmod-nginx-1` actif sur :8080
 - `make smoke` : **8/8 OK** ✓ · `make smoke-nginx` : **8/8 OK** ✓ (le backend reformaté
   n'a aucun impact fonctionnel)
+
+## Pilier analytics décideurs — PostgreSQL + Metabase (14/09, soirée)
+
+Demande utilisateur : connaître montées/descentes par arrêt et véhicule pour faire des
+statistiques, avec Metabase pour les décideurs. Plan complet validé.
+
+### Étapes
+
+1. ✅ Compose : services `db` (postgres:16-alpine, volume `pgdata`, healthcheck),
+   `db-init` (one-shot idempotent), `metabase` (:3000, volume `metabase-data`) ;
+   `api` reçoit `DATABASE_URL`
+2. ✅ Modèle : `ridership_events` (ts, ligne, mode, formel, arrêt, commune, direction,
+   montées, descentes) + `payments` (ts, billet, ligne, tarif, opérateur, conducteur)
+3. ✅ `demo/backend/seed_analytics.py` : 14 jours de données synthétiques — double pic
+   d'heure de pointe en semaine (7-9 h / 17-19 h), journée plate le week-end, montées
+   côté résidentiel / descentes côté pôles d'emploi, adoption AbidjanMob par mode
+   (SOTRA 22 % … woro 8 %), RNG déterministe (seed 42)
+4. ✅ `demo/backend/analytics.py` : écriture **best-effort** — sans DATABASE_URL ou si
+   PG tombe, l'app fonctionne sans erreur (l'analytics ne peut jamais casser la démo)
+5. ✅ Boucle live : chaque paiement insère une ligne `payments` **et** la montée
+   associée dans `ridership_events` (le frontend envoie ligne + arrêt d'embarquement)
+6. ✅ `docs/dashboards-metabase.md` : configuration en 2 min + 6 questions SQL
+   (profil horaire, top arrêts, formel/informel, charge par ligne, recettes par
+   opérateur, adoption par jour)
+7. ✅ `make psql` (console base) · smoke test étendu à 9 vérifications · README,
+   scénario jury (Q&A « données pour les décideurs ? »)
+
+### Incident détecté et corrigé
+
+Le test analytics était toujours esquivé : le grep cherchait « abidjan**mob** » (nom
+produit) alors que les conteneurs sont préfixés « abidjan**mod** » (nom du dossier =
+nom du projet compose). Remplacé par un test direct `pg_isready` via compose exec —
+plus robuste, sans parsing de nom.
+
+### Vérifications
+
+- `db-init` : exit 0 — **128 382 événements · 150 954 paiements · 1 105 007 passagers**
+  (14 jours) ; relance → « Base déjà initialisée » (idempotence ✓)
+- Boucle live : paiement `ABJ-030F2D` → visible dans `payments` **et** montée
+  « Riviera 2, boarded=1 » dans `ridership_events` ✓
+- Metabase : HTTP 200 sur :3000 ✓
+- `make lint` / `make format-check` : conformes ✓ (6 fichiers Python)
+- `make smoke` : **9/9 OK** ✓ · `make smoke-nginx` : **9/9 OK** ✓

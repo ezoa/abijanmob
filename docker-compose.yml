@@ -1,11 +1,17 @@
 # Démo AbidjanMob — lancement complet en une commande :
 #   docker compose up --build        (ou : make up)
 #   → Interface : http://localhost:8080   · API : http://localhost:8000/docs
+#                 Analytics décideurs : http://localhost:3000 (Metabase)
 #
 # Services :
-#   api        — FastAPI (moteur d'itinéraires, paiements simulés, flotte en direct)
+#   api        — FastAPI (moteur d'itinéraires, paiements simulés, flotte en direct) ;
+#                écrit les paiements dans PostgreSQL (best-effort)
 #   nginx      — point d'entrée web : sert le frontend construit + proxifie /api
 #                (étape finale de demo/frontend/Dockerfile : image nginx:1.27-alpine)
+#   db         — PostgreSQL 16 : analytics décideurs (ridership_events, payments)
+#   db-init    — one-shot : génère 14 jours de fréquentation + paiements simulés
+#                (idempotent — ne régénère rien si déjà fait)
+#   metabase   — tableaux de bord décideurs (:3000) branchés sur PostgreSQL
 #   tiles-init — one-shot : récupère les tuiles OSM manquantes dans
 #                ./demo/frontend/public/tiles (idempotent)
 # NB : utiliser docker OU demo/demo.sh, pas les deux en même temps (port 8000).
@@ -14,8 +20,12 @@ services:
     build:
       context: .
       dockerfile: demo/backend/Dockerfile
+    environment:
+      DATABASE_URL: postgresql://abidjanmob:abidjanmob@db:5432/abidjanmob
     ports:
       - "8000:8000"
+    depends_on:
+      - db
     restart: unless-stopped
 
   nginx:
@@ -30,6 +40,48 @@ services:
       - api
     restart: unless-stopped
 
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: abidjanmob
+      POSTGRES_PASSWORD: abidjanmob
+      POSTGRES_DB: abidjanmob
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U abidjanmob -d abidjanmob"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  db-init:
+    image: python:3.12-slim
+    volumes:
+      - ./demo/backend/seed_analytics.py:/seed_analytics.py:ro
+      - ./data/corpus/network.json:/network.json:ro
+    environment:
+      DATABASE_URL: postgresql://abidjanmob:abidjanmob@db:5432/abidjanmob
+      CORPUS_PATH: /network.json
+    command: sh -c "pip install -q psycopg[binary] && python /seed_analytics.py"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  metabase:
+    image: metabase/metabase:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - metabase-data:/metabase-data
+    environment:
+      MB_DB_FILE: /metabase-data/metabase.db
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
   tiles-init:
     image: python:3.12-alpine
     volumes:
@@ -39,3 +91,7 @@ services:
       TILES_DIR: /tiles
     command: python /fetch_tiles.py
     restart: "no"
+
+volumes:
+  pgdata:
+  metabase-data:

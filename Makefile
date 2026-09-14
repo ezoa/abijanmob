@@ -2,11 +2,11 @@
 # « make help » (ou « make ») liste toutes les commandes.
 
 API_VENV := demo/backend/.venv
-PY_FILES := demo/backend/main.py demo/backend/routing_engine.py demo/backend/live.py demo/frontend/scripts/fetch_tiles.py
+PY_FILES := demo/backend/main.py demo/backend/routing_engine.py demo/backend/live.py demo/backend/analytics.py demo/backend/seed_analytics.py demo/frontend/scripts/fetch_tiles.py
 
 .DEFAULT_GOAL := help
 
-.PHONY: help up down build restart logs ps demo smoke smoke-nginx tiles deps-dev lint lint-fix format format-check
+.PHONY: help up down build restart logs ps demo smoke smoke-nginx tiles deps-dev lint lint-fix format format-check psql
 
 help: ## Affiche cette aide
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -42,6 +42,9 @@ smoke-nginx: ## Test de fumée — via nginx (:8080)
 
 tiles: ## Récupère les tuiles de carte manquantes (idempotent)
 	python3 demo/frontend/scripts/fetch_tiles.py
+
+psql: ## Console psql dans la base analytics (stack docker)
+	docker compose exec db psql -U abidjanmob -d abidjanmob
 
 deps-dev: ## Installe les outils de développement (ruff, black)
 	[ -d $(API_VENV) ] || python3 -m venv $(API_VENV)

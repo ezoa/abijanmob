@@ -8,6 +8,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
+import analytics
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from live import LiveTracker
@@ -63,6 +64,8 @@ class PaymentRequest(BaseModel):
     fare: int
     provider: str
     driver_id: str = "drv_001"
+    line_id: str | None = None
+    stop_id: str | None = None
 
 
 @app.get("/api/health")
@@ -71,6 +74,7 @@ def health():
         "status": "ok",
         "service": "abidjanmob-demo",
         "time": datetime.now().isoformat(timespec="seconds"),
+        "analytics_db": analytics.db_url() is not None,
     }
 
 
@@ -119,6 +123,13 @@ def pay(req: PaymentRequest):
         "status": "PAYÉ (simulation)",
     }
     live_receipts.append(ticket)
+    # Chaque paiement devient une donnée de mobilité (best-effort, jamais bloquant).
+    analytics.record_payment(
+        ticket,
+        datetime.now(),
+        line=net.lines.get(req.line_id) if req.line_id else None,
+        stop=net.stops.get(req.stop_id) if req.stop_id else None,
+    )
     return ticket
 
 

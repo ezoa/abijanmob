@@ -63,6 +63,19 @@ make demo          # mode local sans docker (demo/demo.sh)
 Qualité : config `pyproject.toml` (ruff + black, line-length 100) · dépendances de
 développement : `demo/backend/requirements-dev.txt` (`make deps-dev` les installe).
 
+## Analytics décideurs (Metabase)
+
+La stack docker inclut **PostgreSQL + Metabase** : http://localhost:3000
+
+- Au premier lancement, `db-init` génère **14 jours de fréquentation + paiements
+  simulés** (pics d'heure de pointe, semaine/week-end) — idempotent
+- **Chaque paiement fait dans la démo s'ajoute aux données en temps réel** (le
+  principe « le paiement génère la donnée » du dossier, implémenté littéralement)
+- Guide de configuration (2 min, une seule fois) + requêtes des tableaux de bord :
+  **`docs/dashboards-metabase.md`**
+- Console base : `make psql`
+- C'est le « produit données » Phase 2 (AMUGA, SOTRA, urbanistes) — sans PII par design
+
 ## Comment tester
 
 ### 1. Test automatique (5 secondes)

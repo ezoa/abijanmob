@@ -81,6 +81,7 @@ Durée conseillée : **8–11 minutes** + questions. Répété au moins deux foi
 | « Pourquoi l'informel n'est pas toujours le moins cher ? » | C'est exactement le propos : **comparer objectivement** formel et informel. Sur certains trajets le bus formel gagne — l'usager le découvre grâce à AbidjanMob. |
 | « Comment gagnez-vous de l'argent ? » | Commission 1–2 % par transaction, données de mobilité anonymisées (AMUGA/SOTRA/urbanistes), offres B2B — cf. dossier §5.3. |
 | « Et l'IA ? » | v1 : validation automatique des contributions (clustering GPS, détection d'anomalies tarifaires) et estimation dynamique des tarifs. v2 : prédiction de congestion, itinéraires alternatifs. |
+| « Et les données pour les décideurs ? » | **Montrer Metabase (http://localhost:3000)** : profils horaires, top arrêts, recettes par opérateur — c'est le produit « données anonymisées » de Phase 2 (AMUGA/SOTRA/urbanistes, dossier §5.3). Chaque paiement fait pendant la démo y apparaît. Données synthétiques pour le prototype. |
 
 ## 8. Plan B (si panne le jour J)
 
