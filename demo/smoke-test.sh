@@ -71,9 +71,9 @@ total=$(curl -sf "$API/api/driver/drv_001/receipts" |
 [ "${total:-0}" -ge 4400 ]
 check "Dashboard conducteur (recettes du jour : ${total} F)" $?
 
-if docker compose exec -T db pg_isready -U abidjanmob -d abidjanmob >/dev/null 2>&1; then
-  n=$(docker compose exec -T db psql -U abidjanmob -d abidjanmob -tAc \
-    "SELECT count(*) FROM ridership_events" 2>/dev/null)
+if docker compose exec -T db sh -c 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"' >/dev/null 2>&1; then
+  n=$(docker compose exec -T db sh -c \
+    'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -tAc "SELECT count(*) FROM ridership_events"' 2>/dev/null)
   [ "${n:-0}" -ge 100000 ]
   check "Base analytics peuplée (${n} événements de fréquentation)" $?
 

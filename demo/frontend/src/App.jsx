@@ -7,16 +7,21 @@ import HomeView from './components/HomeView.jsx'
 import ResultsView from './components/ResultsView.jsx'
 import PaymentView from './components/PaymentView.jsx'
 import TicketView from './components/TicketView.jsx'
+import ReceiptView from './components/ReceiptView.jsx'
 import DriverView from './components/DriverView.jsx'
 
 export default function App() {
-  const [view, setView] = useState('home')
+  // Lien direct #driver → ouvrir le tableau de bord conducteur (utile en démo/test)
+  const [view, setView] = useState(() =>
+    typeof window !== 'undefined' && window.location.hash === '#driver' ? 'driver' : 'home'
+  )
   const [returnTo, setReturnTo] = useState('home')
   const [pois, setPois] = useState([])
   const [network, setNetwork] = useState(null)
   const [plan, setPlan] = useState(null)
   const [selected, setSelected] = useState(null)
   const [ticket, setTicket] = useState(null)
+  const [autoPrint, setAutoPrint] = useState(false)
   const [fullscreen, setFullscreen] = useState(false)
   const vehicles = useVehicles()
 
@@ -117,6 +122,21 @@ export default function App() {
                 setReturnTo('ticket')
                 setView('driver')
               }}
+              onReceipt={() => {
+                setAutoPrint(false)
+                setView('receipt')
+              }}
+              onPrint={() => {
+                setAutoPrint(true)
+                setView('receipt')
+              }}
+            />
+          )}
+          {view === 'receipt' && ticket && (
+            <ReceiptView
+              ticket={ticket}
+              autoPrint={autoPrint}
+              onBack={() => setView('ticket')}
             />
           )}
           {view === 'driver' && (

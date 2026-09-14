@@ -1,12 +1,49 @@
+import { useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import LiveChip from './LiveChip.jsx'
 import { fmtF } from '../api.js'
 
-export default function TicketView({ ticket, itinerary, vehicles, stopMap, onHome, onDriver }) {
+function ticketShareText(ticket) {
+  return (
+    `Billet AbidjanMob ${ticket.ticket_id} — ${fmtF(ticket.fare)}` +
+    ` · ${ticket.line_name} · payé avec ${ticket.provider} (simulation)`
+  )
+}
+
+export default function TicketView({
+  ticket,
+  itinerary,
+  vehicles,
+  stopMap,
+  onHome,
+  onDriver,
+  onReceipt,
+  onPrint,
+}) {
+  const [shared, setShared] = useState('')
   const rides = (itinerary?.legs || []).filter((l) => l.type === 'ride' && l.mode !== 'taxi')
   const firstRide = rides[0]
-  const hasLive =
-    firstRide && (vehicles || []).some((v) => v.line_id === firstRide.line_id)
+  const hasLive = firstRide && (vehicles || []).some((v) => v.line_id === firstRide.line_id)
+
+  async function share() {
+    const text = ticketShareText(ticket)
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: `Billet AbidjanMob ${ticket.ticket_id}`, text })
+        setShared('Partagé ✓')
+      } catch {
+        setShared('') // partage annulé
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(text)
+        setShared('Copié dans le presse-papiers ✓')
+      } catch {
+        setShared('Copie impossible — notez ' + ticket.ticket_id)
+      }
+    }
+    setTimeout(() => setShared(''), 4000)
+  }
 
   return (
     <div className="ticket-view">
@@ -37,6 +74,18 @@ export default function TicketView({ ticket, itinerary, vehicles, stopMap, onHom
           <span>Heure</span>
           <b>{ticket.time_hm}</b>
         </div>
+        {ticket.document_number && (
+          <div className="tk-row">
+            <span>Reçu</span>
+            <b className="tnum">{ticket.document_number}</b>
+          </div>
+        )}
+        {ticket.financial && (
+          <div className="tk-row">
+            <span>Net conducteur (démo)</span>
+            <b className="tnum">{fmtF(ticket.financial.net_amount)}</b>
+          </div>
+        )}
         <div className="tk-note">Billet numérique — présentez-le en cas de contrôle.</div>
       </div>
 
@@ -51,6 +100,8 @@ export default function TicketView({ ticket, itinerary, vehicles, stopMap, onHom
 
       <div className="flywheel">✨ Ce paiement enrichit déjà la carte : ligne, tarif et horodatage enregistrés pour tous les usagers.</div>
 
+      {shared && <div className="tk-shared">{shared}</div>}
+
       <div className="tk-actions">
         <button className="btn-ghost" onClick={onHome}>
           Nouvelle recherche
@@ -59,6 +110,19 @@ export default function TicketView({ ticket, itinerary, vehicles, stopMap, onHom
           👀 Voir côté conducteur
         </button>
       </div>
+      {ticket.document_id && (
+        <div className="tk-actions">
+          <button className="btn-ghost" onClick={onReceipt}>
+            🧾 Voir le reçu
+          </button>
+          <button className="btn-ghost" onClick={onPrint}>
+            🖨️ Imprimer / PDF
+          </button>
+          <button className="btn-ghost" onClick={share}>
+            📤 Partager
+          </button>
+        </div>
+      )}
     </div>
   )
 }

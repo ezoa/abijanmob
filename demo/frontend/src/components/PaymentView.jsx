@@ -37,6 +37,7 @@ export default function PaymentView({ itinerary, onDone, onCancel }) {
         driver_id: 'drv_001',
         line_id: lines[0]?.line_id,
         stop_id: lines[0]?.from,
+        dest_stop_id: lines[lines.length - 1]?.to,
       })
       onDone(ticket)
     } catch (e) {

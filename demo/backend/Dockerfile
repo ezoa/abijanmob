@@ -9,6 +9,7 @@ COPY demo/backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY demo/backend/main.py demo/backend/routing_engine.py demo/backend/live.py demo/backend/analytics.py ./
+COPY demo/backend/finance ./finance/
 COPY data/corpus /data/corpus
 
 EXPOSE 8000

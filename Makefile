@@ -2,11 +2,11 @@
 # « make help » (ou « make ») liste toutes les commandes.
 
 API_VENV := demo/backend/.venv
-PY_FILES := demo/backend/main.py demo/backend/routing_engine.py demo/backend/live.py demo/backend/analytics.py demo/backend/seed_analytics.py demo/frontend/scripts/fetch_tiles.py
+PY_FILES := $(wildcard demo/backend/*.py) $(wildcard demo/backend/finance/*.py) demo/frontend/scripts/fetch_tiles.py
 
 .DEFAULT_GOAL := help
 
-.PHONY: help up down build restart logs ps demo smoke smoke-nginx tiles deps-dev lint lint-fix format format-check psql
+.PHONY: help up down build restart logs ps demo smoke smoke-nginx tiles deps-dev lint lint-fix format format-check test psql
 
 help: ## Affiche cette aide
 	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
@@ -44,11 +44,14 @@ tiles: ## Récupère les tuiles de carte manquantes (idempotent)
 	python3 demo/frontend/scripts/fetch_tiles.py
 
 psql: ## Console psql dans la base analytics (stack docker)
-	docker compose exec db psql -U abidjanmob -d abidjanmob
+	docker compose exec db sh -c 'psql -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"'
 
-deps-dev: ## Installe les outils de développement (ruff, black)
+deps-dev: ## Installe les outils de développement (ruff, black, pytest, httpx)
 	[ -d $(API_VENV) ] || python3 -m venv $(API_VENV)
 	$(API_VENV)/bin/pip install -q -r demo/backend/requirements-dev.txt
+
+test: deps-dev ## Tests backend (pytest — sans PostgreSQL, store mémoire)
+	cd demo/backend && .venv/bin/python -m pytest tests -q
 
 lint: deps-dev ## Lint Python (ruff)
 	$(API_VENV)/bin/ruff check $(PY_FILES)

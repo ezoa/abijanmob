@@ -308,3 +308,148 @@ plus robuste, sans parsing de nom.
   initiale n'est pas faite, le test affiche un rappel au lieu d'un échec ; une fois
   l'admin créé et la base connectée, il affiche « Metabase configuré ».
 - Vérifié : **10/10 OK** (avec rappel « configuration initiale à faire » — attendu)
+
+## Fichiers d'environnement `.env` (14/09, nuit)
+
+Demande utilisateur : centraliser les identifiants dans des `.env` pour les tests.
+
+### Étapes
+
+1. ✅ `.env.example` (versionné) — modèle documenté : identifiants PostgreSQL,
+   ports (`API_PORT`, `WEB_PORT`, `METABASE_PORT`), emplacement réservé aux futures
+   clés PSP du MVP ; avertissement « les identifiants ne s'appliquent qu'à la
+   première création du volume pgdata »
+2. ✅ `.env` (démo/tests — valeurs actuelles, sans risque) et `.env.prod`
+   (placeholders `CHANGE_ME` pour le MVP) — tous deux **gitignorés**
+3. ✅ `docker-compose.yml` paramétré : `${POSTGRES_USER:-abidjanmob}` etc. —
+   valeurs par défaut inchangées → aucun impact opérationnel sans `.env`
+4. ✅ `make psql` et `smoke-test.sh` : identifiants lus depuis l'environnement du
+   conteneur (`sh -c 'psql -U "$POSTGRES_USER" …'`) au lieu d'être codés en dur
+5. ✅ README : section « Fichiers d'environnement »
+
+### Vérifications
+
+- `make restart` + `make smoke` : **11/11 OK** (1er passage 9/11 : Metabase encore
+  en démarrage — re-test immédiat 11/11, faux positif temporel documenté)
+- `SELECT count(*) FROM driver_stubs` via la nouvelle commande psql : 2 526 ✓
+- `git status` : `.env` et `.env.prod` absents (ignorés) ✓ · `.env.example` présent
+  en non-suivi ✓
+- NB : constaté que l'utilisateur a indexé lui-même 18 fichiers (revue en cours) —
+  l'index n'a pas été touché par l'assistant
+
+## Module financier de démonstration (14/09, nuit)
+
+Demande : étendre le prototype avec un module financier complet — facture/reçu client,
+souche numérique conducteur, suivi recettes/dépenses, estimation des taxes communales
+et étatiques, relevé journalier, préparation FNE/RNE (sans jamais l'appeler).
+Cahier des charges intégral respecté ; documentation dédiée : `docs/module-financier.md`.
+
+### Architecture retenue
+
+- Nouveau paquet backend `demo/backend/finance/` (8 modules) : `tax_engine.py`
+  (moteur fiscal PUR, zéro dépendance base), `fees.py` (frais 1 % + commission 1,5 % —
+  valeurs de démo), `fne.py` (`InvoiceCertificationProvider` + `MockFNEProvider`),
+  `documents.py` + `documents_numbering.py` (génération + numérotation
+  FAC/STB/CLR-AAAA-NNNNNN), `store.py` (deux implémentations derrière la même
+  interface : PostgreSQL / mémoire), `service.py` (façade best-effort à la
+  analytics.py — jamais bloquante pour un paiement), `api.py` (routeur /api).
+- `analytics.py` **inchangé** : le module financier enrichit la ligne `payments`
+  existante (UPDATE par ticket_id) au lieu de doublonner les écritures.
+- Contrats préservés : `POST /api/payments` et `GET /api/driver/{id}/receipts`
+  répondent exactement comme avant ; les infos financières viennent en complément.
+- Choix tests : logique métier pure + store interchangeable → **pytest sans
+  PostgreSQL** (store mémoire forcé par `tests/conftest.py`). Les chemins
+  PostgreSQL sont couverts par le parcours curl fonctionnel post-déploiement.
+
+### Étapes réalisées
+
+1. ✅ Backend : module `finance/` complet + intégration dans `main.py`
+   (router préfixé `/api`, événement de démarrage, enrichissement de la réponse
+   de paiement) ; `PaymentRequest` + champ optionnel `dest_stop_id`.
+2. ✅ Migrations idempotentes (DDL_STATEMENTS) : évolution de `payments`
+   (9 colonnes + index unique `ticket_id`), 6 nouvelles tables + index.
+3. ✅ Seed de 7 règles fiscales de démonstration (is_official=false) : pourcentage
+   opérateur/client, communale Cocody, communale Adjamé **désactivée**, provisions
+   annuelle (gbaka) et mensuelle, règle **expirée 2025**. Aucun taux officiel codé
+   en dur ; l'ancien prélèvement de 4 % n'est pas réutilisé.
+4. ✅ Seed du jour de démo : les 12 SEED_RECEIPTS de Koffi deviennent des
+   transactions complètes (idempotent par date) → les deux dashboards (recettes
+   et financier) affichent les mêmes montants.
+5. ✅ Backfill one-shot PostgreSQL : 2 500 paiements seedés des 7 jours précédents
+   → documents + souches `settled` (drv_001 : 1 214 · drv_002 : ~565 · drv_003 : ~721)
+   → la semaine affiche ~491 200 F de brut.
+6. ✅ Frontend : `ReceiptView` (reçu A4 imprimable + QR de vérification + partage
+   Web Share/repli copie), boutons sur `TicketView` (Voir le reçu / Imprimer-PDF /
+   Partager), `DriverView` réorganisé en 5 onglets « Ma caisse » + 4 nouveaux
+   composants (Souches, Dépenses, Taxes, Clôture), CSS print + tabular-nums +
+   boutons ≥ 44 px. Lien direct `#driver` ajouté (démo/test).
+7. ✅ Docs : `docs/module-financier.md` (nouveau), section Metabase **en fin de**
+   `docs/dashboards-metabase.md` (7 requêtes — contenu existant intact), README,
+   ce journal.
+8. ✅ Tests : `demo/backend/tests/` (23 tests pytest, sans base), pytest+httpx
+   ajoutés à `requirements-dev.txt`, cible `make test`, config pytest dans
+   `pyproject.toml`.
+
+### Incidents détectés et corrigés en cours de route
+
+1. **695 ticket_id dupliqués** dans les 151 k paiements seedés (paradoxe des
+   anniversaires sur 24 bits) — l'index unique exigé ne pouvait pas être posé.
+   Correction : déduplication idempotente à la migration (renommage des doublons
+   en hexa de l'id sur **8 caractères**, longueur disjointe de l'espace aléatoire
+   à 6 caractères — la 1re tentative sur 6 caractères entrait encore en collision
+   avec des ticket_id existants) + `seed_analytics.py` passe en numérotation
+   séquentielle pour les installations fraîches.
+2. **`tax_rules.code` sans contrainte unique** → `ON CONFLICT (code)` refusé par
+   PostgreSQL. Correction : index unique `uq_tax_rules_code` dans la DDL.
+3. **Ordre du démarrage** : le seed du jour de démo faisait échapper le garde-fou
+   du backfill (« aucun document existant »). Correction : backfill AVANT seed.
+   (Une remise à zéro des tables finance fraîchement créées a été faite une fois
+   pour laisser le backfill corrigé se déclencher.)
+4. **psycopg `AmbiguousParameter`** : les filtres optionnels (`%(x)s IS NULL OR …`)
+   échouaient quand le paramètre vaut None (non typé). Correction : casts explicites
+   (`CAST(%(x)s AS text/date) IS NULL OR …`) dans `list_stubs` et `list_expenses`.
+   Bug invisible en store mémoire → détecté par le parcours curl sur la stack
+   docker (les tests pytest seuls ne l'attrapaient pas).
+
+### Vérifications (toutes exécutées, résultats réels)
+
+- `make lint` : **All checks passed** (16 fichiers, ruff E4/E7/E9/F/I) ✓
+- `make format-check` : 16 fichiers conformes (black, line-length 100) ✓
+- `make test` : **23 passed** (9 moteur fiscal + 14 API, store mémoire) ✓
+- `npm run build` : ✓ built in 1,7 s (2e build après module : 1,71 s) ✓
+- `make restart` : stack reconstruite (api, nginx, db, db-init idempotent, metabase,
+  tiles-init « déjà présentes ») ; `curl /api/health` → `finance_store: "postgres"` ✓
+- Migration vérifiée en base : colonnes `payments` présentes (transaction_id, status,
+  gross_amount, currency, provider_key, line_id, stop_id, created_at, updated_at),
+  index `uq_payments_ticket_id` posé, **0 doublon restant**, 2 500 paiements
+  enrichis d'un transaction_id ✓
+- Tables finance : 2 512 documents · 2 512 souches · 9 988 calculs fiscaux · 7 règles ✓
+- `bash demo/smoke-test.sh` : **11/11 OK** ✓ · `API=http://localhost:8080 …` : **11/11 OK** ✓
+- Parcours curl fonctionnel (stack docker) : paiement → reçu FAC-2026-002516
+  (commune Cocody, FNE non certifié, 4 lignes fiscales) → QR vérifié (bon jeton ✓,
+  mauvais jeton ✗, doc inconnu 404) → souche unique STB-2026-002516 (net 250 F =
+  300 − 3 − 5 − 42) → filtres (opérateur, statut, dates) → dépense créée/listée/
+  supprimée (201/200/204/404) → synthèse fiscale (5 règles, taxes 47 896 F +
+  provisions 18 438 F) → clôtures idempotentes (201 puis 200 « déjà clôturée ») →
+  7 règles, 422 sur catégorie/statut invalides ✓
+- Mode local dégradé (uvicorn sans DATABASE_URL, port 8010) : paiement → document
+  en mémoire, dashboard recettes == résumé financier (4 700 F), dépense, clôture,
+  synthèse fiscale, `finance_store: "memory"` ✓ — demo.sh fonctionnel par équivalence
+- Rendu headless Chrome (:8080) : accueil OK (canvas + 75 marqueurs véhicules) ;
+  `#driver` → « Ma caisse » avec 5 onglets, 27 cartes, 12 recettes, 4 barres
+  opérateurs, montants tabulaires (4 400 F jour · 491 200 F semaine · 4 790 F à
+  reverser) ✓
+
+### Décisions notables
+
+- Les recettes seedées du jour ne sont PAS écrites dans `payments` (le comportement
+  Metabase existant est préservé) : elles vivent uniquement dans les tables finance
+  (payment_id déterministes `PAY-SEED-AAAAMMJJ-nn`).
+- Le backfill exclut le jour même pour garder la cohérence dashboard recettes /
+  dashboard financier.
+- Colonne `provider` ajoutée à `driver_stubs` et `commune` à `customer_documents`
+  (filtre opérateur et requête Metabase « recettes par commune » exigés par le
+  cahier des charges), `tax_target` ajoutée à `tax_rules` (nature client/opérateur).
+- Dépenses : pas d'upload de fichier, référence justificatif saisie manuellement.
+- Une souche confirmée n'est jamais modifiable : correction = annulation/remboursement/
+  avoir, non implémenté dans ce lot (mention affichée dans le détail de souche).

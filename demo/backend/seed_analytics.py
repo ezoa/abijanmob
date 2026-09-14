@@ -193,10 +193,13 @@ def main() -> None:
                                 round(boarded * ADOPTION[ln["mode"]] * random.uniform(0.5, 1.5)),
                             )
                             for _ in range(max(0, n_pay)):
+                                # Numéro SÉQUENTIEL (pas aléatoire) : l'index unique
+                                # uq_payments_ticket_id posé par le module financier
+                                # (finance/store.py) exclut tout doublon de ticket_id.
                                 payments.append(
                                     (
                                         ts,
-                                        f"ABJ-{random.getrandbits(24):06X}",
+                                        f"ABJ-{len(payments) + 1:06X}",
                                         ln["name"],
                                         ln["mode"],
                                         ln["fare"],

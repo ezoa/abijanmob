@@ -11,6 +11,8 @@ from datetime import datetime
 import analytics
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from finance import build_payment_context, demo_day_contexts, get_service
+from finance.api import router as finance_router
 from live import LiveTracker
 from pydantic import BaseModel
 from routing_engine import (  # noqa: F401 (CORPUS_PATH réexporté pour les tests)
@@ -19,8 +21,9 @@ from routing_engine import (  # noqa: F401 (CORPUS_PATH réexporté pour les tes
     get_network,
 )
 
-app = FastAPI(title="AbidjanMob API — prototype de démo", version="0.1.0")
+app = FastAPI(title="AbidjanMob API — prototype de démo", version="0.2.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.include_router(finance_router, prefix="/api")
 
 net = get_network()
 tracker = LiveTracker(net)
@@ -66,6 +69,17 @@ class PaymentRequest(BaseModel):
     driver_id: str = "drv_001"
     line_id: str | None = None
     stop_id: str | None = None
+    dest_stop_id: str | None = None  # arrêt de destination (documents financiers)
+
+
+@app.on_event("startup")
+def finance_startup() -> None:
+    """Initialise le module financier (idempotent) : règles de démonstration,
+    recettes du jour du conducteur (SEED_RECEIPTS → transactions complètes) et,
+    avec PostgreSQL, backfill des documents/souches des 7 derniers jours seedés."""
+    get_service().on_startup(
+        demo_day_contexts=demo_day_contexts(driver, driver_line, SEED_RECEIPTS, PROVIDERS)
+    )
 
 
 @app.get("/api/health")
@@ -75,6 +89,7 @@ def health():
         "service": "abidjanmob-demo",
         "time": datetime.now().isoformat(timespec="seconds"),
         "analytics_db": analytics.db_url() is not None,
+        "finance_store": "postgres" if analytics.db_url() else "memory",
     }
 
 
@@ -111,10 +126,11 @@ def pay(req: PaymentRequest):
         raise HTTPException(status_code=400, detail="PSP inconnu")
     if req.driver_id not in net.drivers:
         raise HTTPException(status_code=404, detail="Conducteur inconnu")
+    now = datetime.now()
     ticket = {
         "ticket_id": f"ABJ-{uuid.uuid4().hex[:6].upper()}",
-        "created_at": datetime.now().isoformat(timespec="seconds"),
-        "time_hm": datetime.now().strftime("%H:%M"),
+        "created_at": now.isoformat(timespec="seconds"),
+        "time_hm": now.strftime("%H:%M"),
         "line_name": req.line_name,
         "mode": req.mode,
         "fare": req.fare,
@@ -124,13 +140,28 @@ def pay(req: PaymentRequest):
     }
     live_receipts.append(ticket)
     # Chaque paiement devient une donnée de mobilité (best-effort, jamais bloquant).
-    analytics.record_payment(
-        ticket,
-        datetime.now(),
-        line=net.lines.get(req.line_id) if req.line_id else None,
-        stop=net.stops.get(req.stop_id) if req.stop_id else None,
+    line = net.lines.get(req.line_id) if req.line_id else None
+    stop = net.stops.get(req.stop_id) if req.stop_id else None
+    dest_stop = net.stops.get(req.dest_stop_id) if req.dest_stop_id else None
+    analytics.record_payment(ticket, now, line=line, stop=stop)
+    # Module financier (best-effort lui aussi) : transaction comptable → facture/reçu
+    # client + souche conducteur + calculs fiscaux + relevé. Ne lève jamais.
+    ctx = build_payment_context(
+        ticket=ticket,
+        ts=now,
+        provider_key=req.provider,
+        driver=net.drivers[req.driver_id],
+        line=line,
+        stop=stop,
+        dest_stop=dest_stop,
+        line_id=req.line_id,
+        stop_id=req.stop_id,
+        provider_label=PROVIDERS[req.provider],
     )
-    return ticket
+    finance_info = get_service().process_payment(ctx) or {}
+    # Contrat existant préservé : toutes les clés du billet sont inchangées,
+    # les informations financières viennent en complément.
+    return {**ticket, **finance_info}
 
 
 @app.get("/api/drivers/live")

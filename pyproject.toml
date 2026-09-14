@@ -8,3 +8,9 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F", "I"]
+
+[tool.pytest.ini_options]
+# Tests backend : imports résolus depuis demo/backend (main, finance, …) ;
+# le store mémoire est forcé par conftest.py — aucune base n'est requise.
+pythonpath = ["demo/backend"]
+testpaths = ["demo/backend/tests"]

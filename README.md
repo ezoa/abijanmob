@@ -1,26 +1,37 @@
 # AbidjanMob — Plateforme d'interopérabilité des transports d'Abidjan
 
-Prototype de démonstration (AIMD 2026) : information multimodale + paiement QR mobile money
-sur le corridor pilote **Cocody–Plateau–Adjamé**.
+Prototype de démonstration (AIMD 2026) : information multimodale temps réel + paiement
+QR mobile money + module financier conducteur, sur le corridor pilote
+**Cocody–Plateau–Adjamé**.
 
-> ⚠️ Prototype : données indicatives, paiements **simulés** (aucun argent réel).
+> ⚠️ Prototype : données indicatives, paiements **simulés** (aucun argent réel),
+> frais/commissions/taxes de démonstration, FNE/RNE simulée.
 
 ## Structure
 
 ```
 abidjanmod/
-├── data/corpus/        # corpus pilote (arrêts, lignes, tarifs) — indicatif
+├── data/corpus/          # corpus pilote (20 arrêts, 12 lignes, tarifs) — indicatif
 ├── demo/
-│   ├── backend/        # API FastAPI + moteur d'itinéraires
-│   └── frontend/       # Démo web React (cadre smartphone)
-└── docs/               # plan MVP, journal de suivi, scénario de démo
+│   ├── backend/          # API FastAPI · moteur d'itinéraires · live/ (flotte)
+│   │   ├── finance/      # module financier (factures, souches, taxes, FNE)
+│   │   └── tests/        # tests pytest (sans PostgreSQL)
+│   ├── frontend/         # démo web React (mode mobile automatique)
+│   │   └── scripts/      # cache des tuiles de carte (hors-ligne)
+│   ├── demo.sh           # lancement local sans docker
+│   └── smoke-test.sh     # test de fumée (11 vérifications)
+├── docs/                 # plans, journal, scénario jury, Metabase, finance
+├── docker-compose.yml    # api · nginx · db · db-init · metabase · tiles-init
+└── Makefile              # gestion de la stack + qualité + tests
 ```
 
 ## Documentation
 
 - `docs/plan-mvp.md` — plan MVP 6 mois (oct. 2026 → mars 2027)
-- `docs/journal-de-suivi.md` — journal des étapes de réalisation
-- `docs/scenario-demo.md` — scénario de démonstration (à venir)
+- `docs/scénario-démo.md` — script de présentation jury (8–11 min, Q&A, plan B)
+- `docs/module-financier.md` — module financier (facture/reçu, souches, dépenses, taxes, FNE)
+- `docs/dashboards-metabase.md` — configuration + requêtes des tableaux de bord décideurs
+- `docs/journal-de-suivi.md` — journal des étapes de réalisation (protocole du projet)
 
 ## Lancer la démo
 
@@ -30,18 +41,20 @@ abidjanmod/
 docker compose up --build     # ou simplement : make up
 ```
 
-- Interface : **http://localhost:8080** · API (docs Swagger) : http://localhost:8000/docs
-- Sur un clone frais, le service `tiles-init` récupère les tuiles au premier lancement
-  (~4 min) ; ensuite tout fonctionne **hors-ligne**.
-- Arrêt : `docker compose down`
+- Interface : **http://localhost:8080** · API (Swagger) : http://localhost:8000/docs ·
+  Metabase : http://localhost:3000
+- Sur un clone frais : `tiles-init` récupère les tuiles (~4 min, une fois) et `db-init`
+  génère 14 jours de données analytics — ensuite tout fonctionne **hors-ligne**
+- Arrêt : `make down` (⚠️ jamais `down -v` : cela effacerait les données et la config Metabase)
 
 ### Option B — Script local (sans Docker)
 
 ```bash
-bash demo/demo.sh
+bash demo/demo.sh     # ou : make demo
 ```
 
 - Interface : **http://127.0.0.1:4173** · API : http://127.0.0.1:8000/docs
+- Sans PostgreSQL : l'app tourne en mode dégradé (finance en mémoire, pas d'analytics)
 
 > ⚠️ Un mode à la fois : le port 8000 est partagé. Faire `make down` avant `make demo`,
 > et inversement.
@@ -50,18 +63,48 @@ bash demo/demo.sh
 
 ```bash
 make help          # liste complète
-make up            # démarre la stack docker (api + nginx + tiles)
+make up            # démarre la stack docker (api + nginx + db + metabase + tiles)
 make down          # arrête la stack
-make restart       # down + up
-make logs          # suit les logs
+make restart       # down + up (avec nettoyage des orphelins)
+make logs / ps     # logs en direct · état des conteneurs
 make smoke         # test de fumée (:8000)   · make smoke-nginx (:8080)
+make test          # tests backend pytest (sans PostgreSQL)
 make lint          # lint Python (ruff)      · make lint-fix (corrections auto)
 make format        # formatage Python (black) · make format-check (vérif seule)
-make demo          # mode local sans docker (demo/demo.sh)
+make psql          # console psql dans la base analytics
+make demo          # mode local sans docker
 ```
 
 Qualité : config `pyproject.toml` (ruff + black, line-length 100) · dépendances de
 développement : `demo/backend/requirements-dev.txt` (`make deps-dev` les installe).
+
+## Tester sur mobile (réseau local)
+
+1. Téléphone connecté au **même Wi-Fi** que la machine
+2. Repérer l'IP de la machine : `hostname -I` (ex. `192.168.100.74`)
+3. Ouvrir **http://192.168.100.74:8080** sur le téléphone — l'app passe automatiquement
+   en plein écran mobile (sans le cadre navigateur)
+
+- Pas de Wi-Fi commun ? Connectez la machine au **hotspot du téléphone** et réutilisez
+  la même recette avec l'IP obtenue — la démo reste 100 % locale, **sans internet**
+- Si la page ne charge pas : pare-feu à vérifier (`sudo ufw status`, puis
+  `sudo ufw allow 8080/tcp` si actif)
+
+## Fichiers d'environnement (`.env`)
+
+| Fichier | Rôle | Committé ? |
+|---|---|---|
+| `.env.example` | Modèle documenté — à copier en `.env` sur un clone frais (`cp .env.example .env`) | ✅ oui |
+| `.env` | Identifiants et ports de démo/tests (lisible par docker compose automatiquement) | ❌ jamais |
+| `.env.prod` | Placeholders pour le déploiement MVP (`CHANGE_ME…` à remplacer) | ❌ jamais |
+
+Contenu : `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB`, ports
+(`API_PORT`, `WEB_PORT`, `METABASE_PORT`), et emplacement réservé aux futures clés
+PSP du MVP (Wave, Orange Money… — jamais dans un fichier committé).
+
+> ⚠️ Les identifiants PostgreSQL ne s'appliquent qu'à la **première création** du
+> volume `pgdata`. Les changer ensuite exige soit un volume neuf (données perdues),
+> soit un `ALTER USER` via `make psql`.
 
 ## Analytics décideurs (Metabase)
 
@@ -73,23 +116,37 @@ La stack docker inclut **PostgreSQL + Metabase** : http://localhost:3000
   principe « le paiement génère la donnée » du dossier, implémenté littéralement)
 - Guide de configuration (2 min, une seule fois) + requêtes des tableaux de bord :
   **`docs/dashboards-metabase.md`**
-- Console base : `make psql`
 - C'est le « produit données » Phase 2 (AMUGA, SOTRA, urbanistes) — sans PII par design
+
+## Module financier (démonstration)
+
+Chaque paiement simulé génère une **transaction comptable** complète : facture/reçu
+client (imprimable A4, QR de vérification AbidjanMob), **souche numérique conducteur**
+(brut − frais − commissions − taxes = net), suivi des **dépenses**, **estimation des
+taxes** communales et étatiques (règles de démonstration configurables — aucun taux
+officiel codé en dur), **clôture journalière** idempotente, et une architecture prête
+pour une future intégration **FNE/RNE** (fournisseur simulé, jamais appelé).
+
+- Guide complet : **`docs/module-financier.md`** · endpoints dans http://localhost:8000/docs
+- Dashboard conducteur → onglets **Ma caisse** (vue d'ensemble, souches, dépenses,
+  taxes, clôture)
+- Requêtes Metabase supplémentaires : fin de `docs/dashboards-metabase.md`
 
 ## Comment tester
 
-### 1. Test automatique (5 secondes)
+### 1. Tests automatiques (quelques secondes)
 
 ```bash
-bash demo/smoke-test.sh                        # API directe (:8000)
-API=http://localhost:8080 bash demo/smoke-test.sh   # via nginx (docker)
+make smoke               # ou : bash demo/smoke-test.sh (API directe :8000)
+make smoke-nginx         # via nginx (:8080)
+make test                # 23 tests pytest du module financier (sans PostgreSQL)
 ```
 
-Vérifie : API en ligne, corpus (12 lignes / 20 arrêts), 14 POI, itinéraire phare
-(≥ 3 options), flotte en direct (≥ 20 véhicules en mouvement), ETA, paiement simulé,
-dashboard conducteur. **Résultat attendu : 8/8 OK.**
+`smoke` vérifie 11 points : API, corpus, POI, itinéraire phare, flotte en mouvement,
+ETA, paiement, dashboard conducteur, base analytics, Metabase en ligne et configuré.
+**Résultat attendu : 11/11 OK.**
 
-### 2. Parcours manuel complet (à faire au moins 2 fois avant le jour J)
+### 2. Parcours manuel complet (au moins 2 fois avant le jour J)
 
 Sur http://localhost:8080, suivre dans l'ordre — chaque point est un clic :
 
@@ -100,22 +157,30 @@ Sur http://localhost:8080, suivre dans l'ordre — chaque point est un clic :
 4. **Détails de l'itinéraire** : étapes, attente, marche, tarifs
 5. **Payer ce trajet** → Scanner le QR → conducteur Koffi → Wave → code (4 chiffres
    quelconques) → billet numérique avec QR
-6. **Billet** : chip « Votre woro arrive dans ~X min »
-7. **👀 Voir côté conducteur** : recettes, répartition par opérateur, « monnaie
-   rendue : 0 F »
-8. **Refaire un paiement** → la nouvelle recette apparaît dans le dashboard en < 5 s
+6. **Billet** : chip « Votre woro arrive dans ~X min » · bouton **« Voir le reçu »** →
+   facture FAC-…, QR de vérification, badge « non certifié FNE — prototype » ·
+   **Imprimer / PDF** (une page A4 propre) · **Partager**
+7. **👀 Voir côté conducteur** → « Ma caisse » : recettes live, position partagée,
+   cartes financières (vue d'ensemble)
+8. **Onglet Souches** : détail décomposé (brut − frais − commissions − taxes = net) ·
+   **Dépenses** : ajouter une dépense puis la supprimer (confirmation) ·
+   **Clôture** : « Clôturer ma journée » puis re-cliquer (« déjà clôturée », pas de doublon)
+9. **Refaire un paiement** → nouvelle recette dans le dashboard en < 5 s, nouvelle
+   souche dans l'onglet Souches
 
 ### 3. Variantes à essayer
 
 - Autres trajets : *Yopougon Siporex → Zone 4* (multimodal, bateau-bus) ·
   *Treichville → Cité Administrative* (bateau direct, 200 F)
 - Inverser départ/destination (⇅) · les 4 opérateurs mobile money
-- Bouton ⛶ plein écran (projection) · bouton « Mode conducteur » depuis l'accueil
+- Bouton ⛶ plein écran (projection) · **sur mobile** (cf. section ci-dessus)
+- Metabase : créer les questions du guide → refaire un paiement → ré-exécuter une
+  requête → le paiement apparaît
 
 ### 4. Robustesse (plan B)
 
 - **Hors-ligne** : couper le wifi puis recharger la page → tout doit continuer de marcher
-- **Redémarrage** : `docker compose down && docker compose up -d` → état intact
+- **Redémarrage** : `make restart` → état intact (volumes persistants)
 - API Swagger : http://localhost:8000/docs (si le jury veut voir l'API)
 
 ### 5. Comportements normaux (ce ne sont pas des bugs)
@@ -125,6 +190,9 @@ Sur http://localhost:8080, suivre dans l'ordre — chaque point est un clic :
 - Zoom très rapproché hors corridor : tuiles absentes (cache limité au corridor, z10–15)
 - Le taxi n'offre pas de paiement : hors plateforme, affiché pour comparaison
 - Chaque `smoke-test.sh` ajoute un paiement simulé au dashboard conducteur
+- Metabase : ~1 min au premier démarrage ; frais (1 %/1,5 %) et règles fiscales =
+  **valeurs de démonstration**, clairement marquées comme telles
+- La requête « dépenses » de Metabase est vide tant qu'aucune dépense n'a été saisie
 
 Scénario complet de présentation au jury : `docs/scénario-démo.md`.
 

@@ -5,3 +5,9 @@ node_modules/
 dist/
 demo/frontend/public/tiles/
 .DS_Store
+
+# Environnement — les identifiants ne se committent jamais
+# (seul .env.example, le modèle, est versionné)
+.env
+.env.prod
+.env.local
