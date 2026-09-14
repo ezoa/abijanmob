@@ -1,0 +1,7 @@
+.git
+demo/frontend/node_modules
+demo/frontend/dist
+demo/backend/.venv
+**/__pycache__
+*.pyc
+demo/frontend/public/tiles

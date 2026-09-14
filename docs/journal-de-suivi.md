@@ -137,3 +137,44 @@ la démo, même un problème de driver graphique ne tuera pas la présentation.
 - Préparer les captures d'écran de secours (cf. §7 du scénario)
 - Décider : présentation sur cet ordinateur ou un autre (si autre → `git clone` +
   `bash demo/demo.sh`, prévoir ~10 min d'installation + tuiles)
+
+## Dockerisation (14/09, après gel de la démo)
+
+Demande utilisateur : pouvoir lancer la démo avec docker-compose. Plan complet validé
+(proxy `/api` propre inclus) avant implémentation.
+
+### Étapes
+
+1. ✅ `demo/backend/Dockerfile` — python:3.12-slim ; le corpus est copié vers
+   `/data/corpus` pour reproduire l'arborescence que `routing_engine.py` résout
+   (`parents[2]/data/corpus`)
+2. ✅ `demo/frontend/Dockerfile` multi-étapes (node:22-alpine → nginx:1.27-alpine)
+   + `nginx.conf` (fallback SPA, gzip, proxy `/api` → service `api`)
+3. ✅ Refactor frontend : `api.js` en URL **relative** + proxy `/api` dans
+   `vite.config.js` (server + preview) → demo.sh et docker partagent le même code,
+   plus de CORS ni d'URL codée en dur
+4. ✅ `docker-compose.yml` : `api` (:8000), `web` (:8080), `tiles-init` (one-shot
+   idempotent, bind mount `./demo/frontend/public/tiles`) ; `.dockerignore`
+   (node_modules, .venv, tuiles hors contexte de build)
+5. ✅ `fetch_tiles.py` : répertoire de sortie paramétrable (`TILES_DIR`)
+6. ✅ README : section Docker + avertissement « un mode à la fois » (port 8000 partagé)
+
+### Vérifications
+
+- Accès démon Docker sans sudo confirmé (25 autres conteneurs tournent sur la machine —
+  aucun touché, préfixe projet `abidjanmod-`)
+- `docker compose up --build -d` : 3 services, build OK
+- `tiles-init` : **Exited(0)**, « 0 récupérées, 433 déjà présentes » (idempotence OK)
+- `http://localhost:8080` : 200 · `/api/health` via proxy nginx : OK · tuile via
+  nginx : 200 (34 Ko) · `POST /api/plan` via nginx : 3 itinéraires OK
+- Rendu headless Chrome sur :8080 : UI complète + canvas carte OK
+- Chemin `demo.sh` re-vérifié après refactor : rebuild + preview 4173 avec proxy
+  `/api` (vers l'API docker sur 8000) : OK · tuiles 200
+
+### URLs de démonstration actuels
+
+| URL | Service |
+|---|---|
+| http://localhost:8080 | nginx (docker) — mode recommandé |
+| http://127.0.0.1:4173 | preview Vite local (proxy vers l'API sur 8000) |
+| http://localhost:8000/docs | API Swagger (conteneur docker) |

@@ -13,7 +13,9 @@ BBOX_CITY = (5.20, -4.10, 5.50, -3.85)  # lat_min, lon_min, lat_max, lon_max
 BBOX_CORRIDOR = (5.28, -4.05, 5.43, -3.93)
 ZOOMS_CITY = (10, 11, 12, 13, 14)
 ZOOM_CORRIDOR = 15
-OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "public", "tiles")
+OUT = os.environ.get("TILES_DIR") or os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "..", "public", "tiles"
+)
 UA = "AbidjanMobDemo/0.1 (prototype educatif AIMD 2026)"
 
 

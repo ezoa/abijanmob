@@ -24,16 +24,27 @@ abidjanmod/
 
 ## Lancer la démo
 
+### Option A — Docker (recommandé)
+
+```bash
+docker compose up --build
+```
+
+- Interface : **http://localhost:8080** · API (docs Swagger) : http://localhost:8000/docs
+- Sur un clone frais, le service `tiles-init` récupère les tuiles au premier lancement
+  (~4 min) ; ensuite tout fonctionne **hors-ligne**.
+- Arrêt : `docker compose down`
+
+### Option B — Script local (sans Docker)
+
 ```bash
 bash demo/demo.sh
 ```
 
-Puis ouvrir **http://127.0.0.1:4173** dans un navigateur.
+- Interface : **http://127.0.0.1:4173** · API : http://127.0.0.1:8000/docs
 
-- Premier lancement : installe les dépendances et récupère les tuiles de carte (~4 min).
-- Lancements suivants : démarrage en quelques secondes, **fonctionne hors-ligne**
-  (tuiles en cache local, aucun service externe requis).
-- API (docs Swagger) : http://127.0.0.1:8000/docs
+> ⚠️ Un mode à la fois : le port 8000 est partagé. Faire `docker compose down` avant
+> `demo.sh`, et inversement.
 
 Scénario conseillé : bouton « ⚡ Trajet démo » → comparer les options formel/informel/taxi →
 « Payer ce trajet » → QR conducteur → opérateur mobile money → code (4 chiffres quelconque) →

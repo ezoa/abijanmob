@@ -1,0 +1,37 @@
+# Démo AbidjanMob — lancement complet en une commande :
+#   docker compose up --build
+#   → Interface : http://localhost:8080   · API : http://localhost:8000/docs
+#
+# tiles-init (one-shot) récupère les tuiles OpenStreetMap manquantes dans
+# ./demo/frontend/public/tiles (idempotent : ne retélécharge rien si déjà là).
+# NB : utiliser docker OU demo/demo.sh, pas les deux en même temps (port 8000).
+services:
+  api:
+    build:
+      context: .
+      dockerfile: demo/backend/Dockerfile
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: demo/frontend/Dockerfile
+    ports:
+      - "8080:80"
+    volumes:
+      - ./demo/frontend/public/tiles:/usr/share/nginx/html/tiles
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  tiles-init:
+    image: python:3.12-alpine
+    volumes:
+      - ./demo/frontend/scripts/fetch_tiles.py:/fetch_tiles.py:ro
+      - ./demo/frontend/public/tiles:/tiles
+    environment:
+      TILES_DIR: /tiles
+    command: python /fetch_tiles.py
+    restart: "no"

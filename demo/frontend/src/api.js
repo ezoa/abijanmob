@@ -1,4 +1,5 @@
-export const API = 'http://127.0.0.1:8000'
+// URL relative : servie par le proxy Vite (demo.sh) ou nginx (docker compose).
+export const API = ''
 
 export async function getJSON(path) {
   const r = await fetch(API + path)
