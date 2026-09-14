@@ -215,3 +215,13 @@ Demande utilisateur : tracer le déplacement du chauffeur et partager sa positio
 - Rendu headless : 25 marqueurs `.vhc` présents sur l'accueil (localhost:4173 ET
   docker :8080), légende « Véhicules en direct » ✓
 - Conteneurs api + web reconstruits, stack complète opérationnelle sur :8080
+
+## Guide de test + smoke test (14/09, soirée)
+
+Demande utilisateur : « how to test ». Ajouté :
+
+1. ✅ `demo/smoke-test.sh` — 8 vérifications automatiques (santé, corpus, POI,
+   itinéraire phare, flotte en mouvement, ETA, paiement simulé, dashboard).
+   **Résultat : 8/8 OK sur les deux chemins** (API directe :8000 et proxy nginx :8080)
+2. ✅ README : section « Comment tester » (test auto, parcours manuel en 8 clics,
+   variantes, robustesse/plan B, comportements normaux)
