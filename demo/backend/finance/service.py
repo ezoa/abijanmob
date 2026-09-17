@@ -282,14 +282,38 @@ class FinanceService:
 
     def financial_summary(self, driver_id: str) -> dict | None:
         today = _utcnow().date()
-        week_from = today - timedelta(days=6)
+        # Bilans périodiques : 7 jours glissants, mois et trimestre en cours.
+        bornes = {
+            "week": today - timedelta(days=6),
+            "month": today.replace(day=1),
+            "quarter": today.replace(month=(today.month - 1) // 3 * 3 + 1, day=1),
+        }
         for store in self._stores():
             try:
                 day = store.stubs_range_aggregate(driver_id, today, today)
-                week = store.stubs_range_aggregate(driver_id, week_from, today)
                 day_exp = store.expenses_total(driver_id, today, today)
-                week_exp = store.expenses_total(driver_id, week_from, today)
                 pending = store.stubs_pending_total(driver_id)
+                periodes: dict[str, dict] = {}
+                for nom, d_from in bornes.items():
+                    agg = store.stubs_range_aggregate(driver_id, d_from, today)
+                    exp = store.expenses_total(driver_id, d_from, today)
+                    periodes[nom] = {
+                        "from": d_from.isoformat(),
+                        "to": today.isoformat(),
+                        "gross_revenue": agg["gross_amount"],
+                        "payment_count": agg["count"],
+                        "payment_fees": agg["payment_fee"],
+                        "commissions": agg["platform_fee"],
+                        "tax_provisions": agg["tax_provision"],
+                        "expenses": exp,
+                        "estimated_net_income": (
+                            agg["gross_amount"]
+                            - agg["payment_fee"]
+                            - agg["platform_fee"]
+                            - agg["tax_provision"]
+                            - exp
+                        ),
+                    }
                 return {
                     "driver_id": driver_id,
                     "currency": "XOF",
@@ -312,23 +336,7 @@ class FinanceService:
                         "net_amount": day["net_amount"],
                         "net_to_remit": pending["net_amount"],
                     },
-                    "week": {
-                        "from": week_from.isoformat(),
-                        "to": today.isoformat(),
-                        "gross_revenue": week["gross_amount"],
-                        "payment_count": week["count"],
-                        "payment_fees": week["payment_fee"],
-                        "commissions": week["platform_fee"],
-                        "tax_provisions": week["tax_provision"],
-                        "expenses": week_exp,
-                        "estimated_net_income": (
-                            week["gross_amount"]
-                            - week["payment_fee"]
-                            - week["platform_fee"]
-                            - week["tax_provision"]
-                            - week_exp
-                        ),
-                    },
+                    **periodes,
                     "pending_settlement": pending,
                     "disclaimer": tax_engine.TAX_DISCLAIMER,
                 }

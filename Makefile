@@ -2,7 +2,7 @@
 # « make help » (ou « make ») liste toutes les commandes.
 
 API_VENV := demo/backend/.venv
-PY_FILES := $(wildcard demo/backend/*.py) $(wildcard demo/backend/finance/*.py) demo/frontend/scripts/fetch_tiles.py
+PY_FILES := $(wildcard demo/backend/*.py) $(wildcard demo/backend/finance/*.py) $(wildcard demo/backend/wallets/*.py) demo/frontend/scripts/fetch_tiles.py
 
 .DEFAULT_GOAL := help
 

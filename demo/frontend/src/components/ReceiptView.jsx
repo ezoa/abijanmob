@@ -6,7 +6,7 @@ import { fmtDateTime, fmtF, getJSON } from '../api.js'
 // Texte partagé via l'API Web Share (avec repli copie dans le presse-papiers).
 function shareText(doc) {
   return (
-    `Reçu AbidjanMob ${doc.document_number} — ${fmtF(doc.gross_amount)}` +
+    `Reçu AbidjanMob ${doc.document_number} · ${fmtF(doc.gross_amount)}` +
     ` · ${doc.line_name}${doc.origin_name ? ` (${doc.origin_name} → ${doc.destination_name})` : ''}` +
     ` · Vérification : ${doc.verify_payload}`
   )
@@ -48,7 +48,7 @@ export default function ReceiptView({ ticket, onBack, autoPrint = false }) {
         await navigator.clipboard.writeText(text)
         setShared('Copié dans le presse-papiers ✓')
       } catch {
-        setShared('Copie impossible — notez le numéro ' + doc.document_number)
+        setShared('Copie impossible. Notez le numéro ' + doc.document_number)
       }
     }
     setTimeout(() => setShared(''), 4000)
@@ -111,7 +111,7 @@ export default function ReceiptView({ ticket, onBack, autoPrint = false }) {
         </header>
 
         <div className="rcp-banner">
-          ⚠️ Prototype de démonstration — document simulé, sans valeur officielle ni fiscale.
+          ⚠️ Prototype de démonstration : document simulé, sans valeur officielle ni fiscale.
         </div>
 
         <div className="rcp-parties">
@@ -138,7 +138,7 @@ export default function ReceiptView({ ticket, onBack, autoPrint = false }) {
             <div className="rcp-trip-od">
               <span>{doc.origin_name}</span>
               <span className="rcp-trip-arrow">→</span>
-              <span>{doc.destination_name || '—'}</span>
+              <span>{doc.destination_name || '(non renseignée)'}</span>
             </div>
           )}
         </div>
@@ -187,7 +187,7 @@ export default function ReceiptView({ ticket, onBack, autoPrint = false }) {
             <div className="rcp-verify-title">Vérification AbidjanMob</div>
             <div className="rcp-verify-sub">
               Scannez ce QR (ou saisissez le jeton dans l'application) pour vérifier
-              l'authenticité de ce reçu. QR de démonstration AbidjanMob — pas un QR FNE.
+              l'authenticité de ce reçu. QR de démonstration AbidjanMob, pas un QR FNE.
             </div>
             <div className="rcp-verify-token tnum">{doc.verification_token}</div>
           </div>
@@ -196,12 +196,12 @@ export default function ReceiptView({ ticket, onBack, autoPrint = false }) {
         <div className="rcp-fne">
           <span className="rcp-fne-badge">Certification FNE/RNE</span>
           <span>
-            <b>non certifié — prototype</b> · {doc.fne_message}
+            <b>non certifié (prototype)</b> · {doc.fne_message}
           </span>
         </div>
 
         <footer className="rcp-footer">
-          Reçu généré par AbidjanMob (prototype de démonstration AIMD 2026) — paiements
+          Reçu généré par AbidjanMob (prototype de démonstration AIMD 2026) : paiements
           simulés, aucun débit réel. Document {doc.document_number} · paiement {doc.payment_id}.
         </footer>
       </article>

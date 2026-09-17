@@ -141,7 +141,7 @@ def is_driver_burden(kind: str) -> bool:
 
 # --------------------------------------------------------------------- seed démo
 
-_DEMO_LEGAL_REF = "Règle fictive de démonstration — aucun texte officiel"
+_DEMO_LEGAL_REF = "Règle fictive de démonstration : aucun texte officiel"
 
 
 def demo_rules() -> list[dict]:
@@ -154,9 +154,9 @@ def demo_rules() -> list[dict]:
     return [
         {
             "code": "DEMO_ETAT_COURSE",
-            "label": "Règle de démonstration — contribution étatique par course (1,5 %)",
+            "label": "Règle de démonstration : contribution étatique par course (1,5 %)",
             "authority_type": "state",
-            "authority_name": "État (fictif — démonstration)",
+            "authority_name": "État (fictif, démonstration)",
             "commune": None,
             "vehicle_category": None,
             "operator_regime": None,
@@ -173,9 +173,9 @@ def demo_rules() -> list[dict]:
         },
         {
             "code": "DEMO_TVA_TRANSPORT",
-            "label": "Règle de démonstration — TVA transport (2 %, incluse dans le tarif)",
+            "label": "Règle de démonstration : TVA transport (2 %, incluse dans le tarif)",
             "authority_type": "state",
-            "authority_name": "État (fictif — démonstration)",
+            "authority_name": "État (fictif, démonstration)",
             "commune": None,
             "vehicle_category": None,
             "operator_regime": None,
@@ -192,9 +192,9 @@ def demo_rules() -> list[dict]:
         },
         {
             "code": "DEMO_COCODY_COURSE",
-            "label": "Règle de démonstration — taxe communale par course (Cocody)",
+            "label": "Règle de démonstration : taxe communale par course (Cocody)",
             "authority_type": "communal",
-            "authority_name": "Commune de Cocody (fictive — démonstration)",
+            "authority_name": "Commune de Cocody (fictive, démonstration)",
             "commune": "Cocody",
             "vehicle_category": None,
             "operator_regime": None,
@@ -211,9 +211,9 @@ def demo_rules() -> list[dict]:
         },
         {
             "code": "DEMO_ADJAMME_COURSE",
-            "label": "Règle de démonstration — taxe communale par course (Adjamé, désactivée)",
+            "label": "Règle de démonstration : taxe communale par course (Adjamé, désactivée)",
             "authority_type": "communal",
-            "authority_name": "Commune d'Adjamé (fictive — démonstration)",
+            "authority_name": "Commune d'Adjamé (fictive, démonstration)",
             "commune": "Adjamé",
             "vehicle_category": None,
             "operator_regime": None,
@@ -230,9 +230,9 @@ def demo_rules() -> list[dict]:
         },
         {
             "code": "DEMO_VIGNETTE_ANNUELLE",
-            "label": "Règle de démonstration — provision vignette annuelle (gbaka)",
+            "label": "Règle de démonstration : provision vignette annuelle (gbaka)",
             "authority_type": "state",
-            "authority_name": "État (fictif — démonstration)",
+            "authority_name": "État (fictif, démonstration)",
             "commune": None,
             "vehicle_category": "gbaka",
             "operator_regime": None,
@@ -249,9 +249,9 @@ def demo_rules() -> list[dict]:
         },
         {
             "code": "DEMO_CIRCULATION_MENSUELLE",
-            "label": "Règle de démonstration — provision taxe mensuelle de circulation",
+            "label": "Règle de démonstration : provision taxe mensuelle de circulation",
             "authority_type": "state",
-            "authority_name": "État (fictif — démonstration)",
+            "authority_name": "État (fictif, démonstration)",
             "commune": None,
             "vehicle_category": None,
             "operator_regime": None,
@@ -268,9 +268,9 @@ def demo_rules() -> list[dict]:
         },
         {
             "code": "DEMO_TAXE_EXPIREE",
-            "label": "Règle de démonstration — taxe expirée (2025, jamais appliquée)",
+            "label": "Règle de démonstration : taxe expirée (2025, jamais appliquée)",
             "authority_type": "state",
-            "authority_name": "État (fictif — démonstration)",
+            "authority_name": "État (fictif, démonstration)",
             "commune": None,
             "vehicle_category": None,
             "operator_regime": None,

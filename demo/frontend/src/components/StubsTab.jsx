@@ -180,7 +180,7 @@ export default function StubsTab() {
                       </ul>
                     )}
                     <div className="stub-note">
-                      Souche confirmée — toute correction passerait par une annulation /
+                      Souche confirmée. Toute correction passerait par une annulation /
                       remboursement (non implémenté dans ce lot de démonstration).
                       Paiement {detail.payment_id} · transaction {detail.transaction_id}.
                     </div>

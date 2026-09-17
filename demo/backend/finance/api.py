@@ -273,7 +273,7 @@ def close_day(driver_id: str, req: ClosureRequest):
     if created:
         return JSONResponse(status_code=201, content=payload)
     payload["already_closed"] = True
-    payload["message"] = "Journée déjà clôturée — aucune double clôture créée"
+    payload["message"] = "Journée déjà clôturée. Aucune double clôture créée"
     return JSONResponse(status_code=200, content=payload)
 
 

@@ -128,7 +128,7 @@ export default function ResultsView({ plan, selected, onSelect, onPay, onBack, s
                   Payer ce trajet · {fmtF(it.fare)}
                 </button>
               ) : (
-                <div className="it-note">Hors plateforme — estimation pour comparaison</div>
+                <div className="it-note">Hors plateforme : estimation pour comparaison</div>
               )}
             </div>
           )

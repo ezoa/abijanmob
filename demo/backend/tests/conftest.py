@@ -19,12 +19,14 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from finance import configure_for_tests  # noqa: E402
+from wallets import configure_for_tests as configure_wallets_for_tests  # noqa: E402
 
 
 def pytest_configure(config):
     # Force le store mémoire AVANT tout import d'application : aucun test ne
     # touche à PostgreSQL, même si DATABASE_URL était présent dans l'environnement.
     configure_for_tests()
+    configure_wallets_for_tests()
 
 
 @pytest.fixture(scope="session")

@@ -29,8 +29,9 @@ Tous les documents d'un même paiement partagent les identifiants communs
    provisions, net conducteur).
 3. Sur l'écran du billet, de nouveaux boutons : **« Voir le reçu »**,
    **« Imprimer / Enregistrer en PDF »** (mise en page A4 via CSS `@media print`),
-   **« Partager »** (Web Share API, repli copie dans le presse-papiers),
-   **« Nouvelle recherche »** et **« Voir côté conducteur »** (existants).
+   **« Partager »** (Web Share API, repli copie dans le presse-papiers) et
+   **« Nouvelle recherche »** (existant). L'accès à la vue conducteur se fait par
+   la bascule **« Mode conducteur »** du bandeau (retour au billet conservé).
 4. Le reçu affiche : logo AbidjanMob, mention « Prototype de démonstration », numéro
    unique, date/heure, exploitant/conducteur, ligne, origine → destination (si
    disponibles), montant brut, détail des taxes **uniquement si une règle

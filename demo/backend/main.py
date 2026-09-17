@@ -14,16 +14,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from finance import build_payment_context, demo_day_contexts, get_service
 from finance.api import router as finance_router
 from live import LiveTracker
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from routing_engine import (  # noqa: F401 (CORPUS_PATH réexporté pour les tests)
     CORPUS_PATH,
     MODES,
     get_network,
 )
+from wallets import WalletError
+from wallets import get_service as get_wallet_service
+from wallets.api import router as wallets_router
 
 app = FastAPI(title="AbidjanMob API — prototype de démo", version="0.2.0")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 app.include_router(finance_router, prefix="/api")
+app.include_router(wallets_router, prefix="/api")
 
 net = get_network()
 tracker = LiveTracker(net)
@@ -57,29 +61,39 @@ live_receipts: list[dict] = []
 
 
 class PlanRequest(BaseModel):
-    from_poi: str
-    to_poi: str
+    from_poi: str | None = None
+    to_poi: str | None = None
+    from_stop: str | None = None  # arrêt direct (ex. position actuelle géolocalisée)
+    to_stop: str | None = None
+
+
+class SplitRequest(BaseModel):
+    provider: str
+    amount: int = Field(gt=0)
 
 
 class PaymentRequest(BaseModel):
     line_name: str
     mode: str
     fare: int
-    provider: str
+    provider: str | None = None  # opérateur unique (chemin historique)
     driver_id: str = "drv_001"
     line_id: str | None = None
     stop_id: str | None = None
     dest_stop_id: str | None = None  # arrêt de destination (documents financiers)
+    splits: list[SplitRequest] | None = None  # répartition multi-portefeuilles
 
 
 @app.on_event("startup")
 def finance_startup() -> None:
     """Initialise le module financier (idempotent) : règles de démonstration,
     recettes du jour du conducteur (SEED_RECEIPTS → transactions complètes) et,
-    avec PostgreSQL, backfill des documents/souches des 7 derniers jours seedés."""
+    avec PostgreSQL, backfill des documents/souches des 7 derniers jours seedés.
+    Initialise aussi les portefeuilles du passager (soldes + historique démo)."""
     get_service().on_startup(
         demo_day_contexts=demo_day_contexts(driver, driver_line, SEED_RECEIPTS, PROVIDERS)
     )
+    get_wallet_service().on_startup()
 
 
 @app.get("/api/health")
@@ -114,18 +128,33 @@ def pois():
 
 @app.post("/api/plan")
 def plan(req: PlanRequest):
+    if not (req.from_poi or req.from_stop) or not (req.to_poi or req.to_stop):
+        raise HTTPException(status_code=422, detail="Départ et destination requis")
     try:
-        return net.plan(req.from_poi, req.to_poi)
+        return net.plan(req.from_poi, req.to_poi, from_stop=req.from_stop, to_stop=req.to_stop)
     except KeyError:
         raise HTTPException(status_code=404, detail="POI inconnu")
 
 
 @app.post("/api/payments")
 def pay(req: PaymentRequest):
-    if req.provider not in PROVIDERS:
-        raise HTTPException(status_code=400, detail="PSP inconnu")
     if req.driver_id not in net.drivers:
         raise HTTPException(status_code=404, detail="Conducteur inconnu")
+    # Répartition multi-portefeuilles (si fournie) : validation AVANT tout effet
+    # de bord. Champ `provider` seul = comportement historique inchangé.
+    splits: list[dict] | None = None
+    if req.splits is not None:
+        try:
+            splits = get_wallet_service().prepare_split(req.fare, req.splits)
+        except WalletError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        provider_label = " + ".join(PROVIDERS[s["provider"]] for s in splits)
+        provider_key = splits[0]["provider"] if len(splits) == 1 else "multi"
+    else:
+        if not req.provider or req.provider not in PROVIDERS:
+            raise HTTPException(status_code=400, detail="PSP inconnu")
+        provider_label = PROVIDERS[req.provider]
+        provider_key = req.provider
     now = datetime.now()
     ticket = {
         "ticket_id": f"ABJ-{uuid.uuid4().hex[:6].upper()}",
@@ -134,10 +163,21 @@ def pay(req: PaymentRequest):
         "line_name": req.line_name,
         "mode": req.mode,
         "fare": req.fare,
-        "provider": PROVIDERS[req.provider],
+        "provider": provider_label,
         "driver_id": req.driver_id,
         "status": "PAYÉ (simulation)",
     }
+    wallet_extra: dict = {}
+    if splits is not None:
+        # Débit des portefeuilles simulés : refus métier (solde, cohérence) =
+        # 400 ; panne d'infrastructure = best-effort, le paiement ne s'arrête pas.
+        try:
+            wallet_extra = (
+                get_wallet_service().pay_split(ticket["ticket_id"], req.line_name, req.fare, splits)
+                or {}
+            )
+        except WalletError as e:
+            raise HTTPException(status_code=400, detail=str(e))
     live_receipts.append(ticket)
     # Chaque paiement devient une donnée de mobilité (best-effort, jamais bloquant).
     line = net.lines.get(req.line_id) if req.line_id else None
@@ -149,19 +189,19 @@ def pay(req: PaymentRequest):
     ctx = build_payment_context(
         ticket=ticket,
         ts=now,
-        provider_key=req.provider,
+        provider_key=provider_key,
+        provider_label=provider_label,
         driver=net.drivers[req.driver_id],
         line=line,
         stop=stop,
         dest_stop=dest_stop,
         line_id=req.line_id,
         stop_id=req.stop_id,
-        provider_label=PROVIDERS[req.provider],
     )
     finance_info = get_service().process_payment(ctx) or {}
     # Contrat existant préservé : toutes les clés du billet sont inchangées,
     # les informations financières viennent en complément.
-    return {**ticket, **finance_info}
+    return {**ticket, **wallet_extra, **finance_info}
 
 
 @app.get("/api/drivers/live")

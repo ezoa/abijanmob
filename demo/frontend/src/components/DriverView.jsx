@@ -21,8 +21,16 @@ const TABS = [
   { id: 'closure', label: 'Clôture' },
 ]
 
+const PERIODES = [
+  ['today', 'Jour'],
+  ['week', 'Semaine'],
+  ['month', 'Mois'],
+  ['quarter', 'Trimestre'],
+]
+
 export default function DriverView({ onBack, network, vehicles }) {
   const [tab, setTab] = useState('overview')
+  const [periode, setPeriode] = useState('today')
   const [data, setData] = useState(null)
   const [fin, setFin] = useState(null)
   const [error, setError] = useState(false)
@@ -108,7 +116,7 @@ export default function DriverView({ onBack, network, vehicles }) {
               </div>
               <div className="drv-pos-note">
                 Les usagers voient votre véhicule arriver sur leur carte et savent quand se
-                présenter à l'arrêt — moins d'attente dans les deux sens.
+                présenter à l'arrêt. Moins d'attente dans les deux sens.
               </div>
             </div>
           )}
@@ -129,40 +137,60 @@ export default function DriverView({ onBack, network, vehicles }) {
           </div>
 
           {fin && (
-            <div className="fin-grid">
-              <div className="stat">
-                <span className="stat-val tnum">
-                  −{fmtF(fin.today.payment_fees + fin.today.commissions)}
-                </span>
-                <span className="stat-lbl">frais + commissions (jour) ▼</span>
+            <>
+              <div className="periode-chips" role="group" aria-label="Période du bilan">
+                {PERIODES.map(([id, label]) => (
+                  <button
+                    key={id}
+                    className={`chip-btn ${periode === id ? 'chip-on' : ''}`}
+                    onClick={() => setPeriode(id)}
+                  >
+                    {label}
+                  </button>
+                ))}
               </div>
-              <div className="stat">
-                <span className="stat-val tnum">−{fmtF(fin.today.tax_provisions)}</span>
-                <span className="stat-lbl">provisions fiscales ▼</span>
+              <div className="fin-grid">
+                {(() => {
+                  const b = fin[periode] || fin.today
+                  return (
+                    <>
+                      <div className="stat stat-main">
+                        <span className="stat-val tnum">{fmtF(b.gross_revenue)}</span>
+                        <span className="stat-lbl">
+                          recettes · {b.payment_count} paiement{b.payment_count > 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <div className="stat">
+                        <span className="stat-val tnum">−{fmtF(b.payment_fees + b.commissions)}</span>
+                        <span className="stat-lbl">frais + commissions ▼</span>
+                      </div>
+                      <div className="stat">
+                        <span className="stat-val tnum">−{fmtF(b.tax_provisions)}</span>
+                        <span className="stat-lbl">provisions fiscales ▼</span>
+                      </div>
+                      <div className="stat">
+                        <span className="stat-val tnum">−{fmtF(b.expenses)}</span>
+                        <span className="stat-lbl">dépenses ▼</span>
+                      </div>
+                      <div className="stat">
+                        <span
+                          className={`stat-val tnum ${b.estimated_net_income >= 0 ? 'val-pos' : 'val-neg'}`}
+                        >
+                          {fmtSign(b.estimated_net_income)}
+                        </span>
+                        <span className="stat-lbl">
+                          bénéfice net estimé {b.estimated_net_income >= 0 ? '▲' : '▼'}
+                        </span>
+                      </div>
+                      <div className="stat">
+                        <span className="stat-val tnum">{fmtF(fin.today.net_to_remit)}</span>
+                        <span className="stat-lbl">solde à reverser (jour)</span>
+                      </div>
+                    </>
+                  )
+                })()}
               </div>
-              <div className="stat">
-                <span className="stat-val tnum">−{fmtF(fin.today.expenses)}</span>
-                <span className="stat-lbl">dépenses ▼</span>
-              </div>
-              <div className="stat">
-                <span
-                  className={`stat-val tnum ${fin.today.estimated_net_income >= 0 ? 'val-pos' : 'val-neg'}`}
-                >
-                  {fmtSign(fin.today.estimated_net_income)}
-                </span>
-                <span className="stat-lbl">
-                  bénéfice net estimé {fin.today.estimated_net_income >= 0 ? '▲' : '▼'}
-                </span>
-              </div>
-              <div className="stat">
-                <span className="stat-val tnum">{fmtF(fin.week.gross_revenue)}</span>
-                <span className="stat-lbl">recettes 7 jours</span>
-              </div>
-              <div className="stat">
-                <span className="stat-val tnum">{fmtF(fin.today.net_to_remit)}</span>
-                <span className="stat-lbl">solde à reverser</span>
-              </div>
-            </div>
+            </>
           )}
 
           <div className="drv-provs">
@@ -205,7 +233,7 @@ export default function DriverView({ onBack, network, vehicles }) {
           </div>
 
           <div className="flywheel">
-            Chaque paiement apparaît ici en temps réel — fini la crise de monnaie à la
+            Chaque paiement apparaît ici en temps réel. Fini la crise de monnaie à la
             descente.
           </div>
         </div>

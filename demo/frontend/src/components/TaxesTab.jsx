@@ -119,7 +119,7 @@ export default function TaxesTab() {
         ⚖️ {data.disclaimer}
         <br />
         Les montants « forfait journalier / mensuel / annuel » (marqués ∝) sont des
-        <b> provisions estimatives réparties par course</b> — jamais des prélèvements
+        <b> provisions estimatives réparties par course</b>, jamais des prélèvements
         légalement exigibles par course. Aucun taux officiel ivoirien n'est codé en dur :
         tout provient des règles configurées, toutes fictives ici (is_official=false).
       </div>

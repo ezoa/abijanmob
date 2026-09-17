@@ -46,5 +46,6 @@ export const MODE_ICONS = {
   sotra: '🚌',
   bateau: '⛴️',
   taxi: '🚖',
+  taxi_communal: '🚙',
   walk: '🚶',
 }

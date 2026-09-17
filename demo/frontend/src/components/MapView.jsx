@@ -275,7 +275,7 @@ export default function MapView({ network, itinerary, plan, vehicles, dim = fals
   if (mapFailed) {
     return (
       <div className="map-fallback">
-        🗺️ Carte indisponible sur cet appareil — itinéraires et paiement restent accessibles.
+        🗺️ Carte indisponible sur cet appareil. Itinéraires et paiement restent accessibles.
       </div>
     )
   }

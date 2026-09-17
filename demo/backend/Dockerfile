@@ -8,8 +8,9 @@ WORKDIR /demo/backend
 COPY demo/backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY demo/backend/main.py demo/backend/routing_engine.py demo/backend/live.py demo/backend/analytics.py ./
+COPY demo/backend/main.py demo/backend/routing_engine.py demo/backend/live.py demo/backend/analytics.py demo/backend/quartiers.py ./
 COPY demo/backend/finance ./finance/
+COPY demo/backend/wallets ./wallets/
 COPY data/corpus /data/corpus
 
 EXPOSE 8000

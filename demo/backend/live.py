@@ -27,8 +27,8 @@ class LiveTracker:
         for d in network.drivers.values():
             self.line_driver[d["line_id"]] = d
         for ln in network.lines.values():
-            if ln["mode"] in ("sotra", "bateau", "taxi"):
-                continue  # suivi en direct : réseau informel (prototype)
+            if ln["mode"] in ("sotra", "bateau", "taxi", "taxi_communal"):
+                continue  # suivi en direct : gbakas et woros (prototype)
             total = ln["_cum_min"][-1]
             cycle = 2 * (total + TERMINAL_WAIT_MIN)
             count = max(FLEET_MIN, min(FLEET_MAX, round(cycle / (2 * ln["headway_min"]))))

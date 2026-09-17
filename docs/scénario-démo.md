@@ -49,12 +49,16 @@ Durée conseillée : **8–11 minutes** + questions. Répété au moins deux foi
 1. Choisir l'option informelle → **Payer ce trajet · 500 F**.
 2. **Scanner le QR du conducteur** → « chaque conducteur affiche une carte QR plastifiée ;
    aucun smartphone spécial, aucun équipement à acheter ».
-3. Choisir **Wave** (ou Orange Money) → écran de paiement → saisir 4 chiffres → **Payer**.
+3. **Débloquer mes comptes** avec le code secret (4 chiffres, simulation) →
+   répartition du paiement entre les portefeuilles virtuels (le bouton « Remplir
+   automatiquement » propose la répartition ; on peut aussi la répartir sur
+   plusieurs comptes) → **Payer**.
 4. Billet numérique : QR, montant exact, horodatage.
    > « Le débit est du montant **exact** du trajet. L'apprenti ne cherche plus de monnaie,
    > le conducteur ne refuse plus de client. »
-5. Cliquer **👀 Voir côté conducteur** → le paiement apparaît **en direct** dans le
-   tableau de bord : recettes du jour, répartition par opérateur, *monnaie rendue : 0 F*.
+5. Basculer en **🚐 Mode conducteur** (bouton du bandeau) → le paiement apparaît
+   **en direct** dans « Ma caisse » : recettes du jour, répartition par opérateur,
+   *monnaie rendue : 0 F* → revenir avec **👤 Mode passager**.
 
 ## 5. La boucle données (1 min) — le cœur de l'innovation
 

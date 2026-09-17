@@ -15,6 +15,8 @@ from collections import defaultdict
 from itertools import count
 from pathlib import Path
 
+import quartiers
+
 CORPUS_PATH = Path(__file__).resolve().parents[2] / "data" / "corpus" / "network.json"
 
 MODES = {
@@ -23,6 +25,12 @@ MODES = {
     "sotra": {"label": "Bus SOTRA", "speed_kmh": 20.0, "color": "#2A9D8F", "formal": True},
     "bateau": {"label": "Bateau-bus", "speed_kmh": 14.0, "color": "#457B9D", "formal": True},
     "taxi": {"label": "Taxi", "speed_kmh": 26.0, "color": "#6D597A", "formal": False},
+    "taxi_communal": {
+        "label": "Taxi communal",
+        "speed_kmh": 30.0,
+        "color": "#7FB069",
+        "formal": False,
+    },
 }
 WALK_KMH = 4.5
 DETOUR = 1.15
@@ -58,6 +66,12 @@ class Network:
         self.stops = {s["id"]: s for s in data["stops"]}
         self.lines = {ln["id"]: ln for ln in data["lines"]}
         self.pois = {p["id"]: p for p in data["pois"]}
+        for _p in self.pois.values():
+            _p.setdefault("kind", "lieu")
+            _p["stop_name"] = self.stops[_p["stop_id"]]["name"]
+        # Quartiers d'Abidjan : fusionnés après les POI du corpus (qui priment).
+        for _q in quartiers.build_quartier_pois(self.stops, self.pois):
+            self.pois[_q["id"]] = _q
         self.drivers = {d["id"]: d for d in data["drivers"]}
 
         self.stop_lines: dict[str, list[tuple[dict, int]]] = defaultdict(list)
@@ -198,7 +212,7 @@ class Network:
             "co2_saved_g": _round(
                 max(0.0, transit_km * (CO2_TAXI_G_PER_KM - CO2_TRANSIT_G_PER_KM))
             ),
-            "summary": f"{names} — {_round(total)} min · {fare} FCFA",
+            "summary": f"{names} · {_round(total)} min · {fare} FCFA",
         }
 
     def _taxi_itinerary(self, o_stop: dict, d_stop: dict) -> dict:
@@ -227,7 +241,7 @@ class Network:
             "walk_m": 0,
             "transfers": 0,
             "co2_saved_g": 0,
-            "summary": f"Taxi — {_round(3.0 + dur)} min · ~{fare} FCFA",
+            "summary": f"Taxi · {_round(3.0 + dur)} min · ~{fare} FCFA",
         }
 
     def _walk_itinerary(self, o_stop: dict, d_stop: dict) -> dict | None:
@@ -248,15 +262,39 @@ class Network:
             "walk_m": _round(dist_m),
             "transfers": 0,
             "co2_saved_g": _round(dist_m / 1000.0 * CO2_TAXI_G_PER_KM),
-            "summary": f"À pied — {_round(walk_min(dist_m))} min · 0 FCFA",
+            "summary": f"À pied · {_round(walk_min(dist_m))} min · 0 FCFA",
         }
 
     # ------------------------------------------------------------------ public
 
-    def plan(self, from_poi: str, to_poi: str) -> dict:
-        if from_poi not in self.pois or to_poi not in self.pois:
-            raise KeyError("POI inconnu")
-        o_poi, d_poi = self.pois[from_poi], self.pois[to_poi]
+    def _resolve_poi(self, poi_id: str | None, stop_id: str | None) -> dict:
+        """POI du corpus, ou pseudo-POI construit depuis un arrêt direct (position
+        actuelle géolocalisée côté client). L'arrêt direct prime s'il est fourni."""
+        if stop_id:
+            if stop_id not in self.stops:
+                raise KeyError("POI inconnu")
+            s = self.stops[stop_id]
+            return {
+                "id": f"stop:{stop_id}",
+                "label": s["name"],
+                "commune": s["commune"],
+                "kind": "arret",
+                "stop_id": stop_id,
+            }
+        if poi_id and poi_id in self.pois:
+            return self.pois[poi_id]
+        raise KeyError("POI inconnu")
+
+    def plan(
+        self,
+        from_poi: str | None = None,
+        to_poi: str | None = None,
+        *,
+        from_stop: str | None = None,
+        to_stop: str | None = None,
+    ) -> dict:
+        o_poi = self._resolve_poi(from_poi, from_stop)
+        d_poi = self._resolve_poi(to_poi, to_stop)
         o_stop_id, d_stop_id = o_poi["stop_id"], d_poi["stop_id"]
         o_stop, d_stop = self.stops[o_stop_id], self.stops[d_stop_id]
 
@@ -264,7 +302,10 @@ class Network:
             ("rapide", None, 0.0),
             ("economique", None, FARE_WEIGHT),
             ("formel", {"sotra", "bateau"}, 0.0),
-            ("informel", {"gbaka", "woro"}, 0.0),
+            ("informel", {"gbaka", "woro", "taxi_communal"}, 0.0),
+            # Option « à pied jusqu'au véhicule » : transports en commun sans taxi
+            # communal. Depuis un quartier, on rejoint l'arrêt ou la gare à pied.
+            ("sans_taxi_communal", {"gbaka", "woro", "sotra", "bateau"}, 0.0),
         ]
         candidates: list[dict] = []
         seen: set[tuple] = set()
@@ -291,7 +332,9 @@ class Network:
                 cheapest["tag"] = "Le moins cher"
         for it in kept:
             rides = [leg for leg in it["legs"] if leg["type"] == "ride"]
-            if rides and all(MODES[leg["mode"]]["formal"] for leg in rides):
+            if it.get("kind") == "sans_taxi_communal" and it["walk_m"] > 0:
+                it.setdefault("tag", "Marche + transport")
+            elif rides and all(MODES[leg["mode"]]["formal"] for leg in rides):
                 it.setdefault("tag", "Réseau formel")
             elif rides and all(not MODES[leg["mode"]]["formal"] for leg in rides):
                 it.setdefault("tag", "Réseau informel")

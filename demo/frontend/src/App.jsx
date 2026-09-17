@@ -9,6 +9,7 @@ import PaymentView from './components/PaymentView.jsx'
 import TicketView from './components/TicketView.jsx'
 import ReceiptView from './components/ReceiptView.jsx'
 import DriverView from './components/DriverView.jsx'
+import SpendingsView from './components/SpendingsView.jsx'
 
 export default function App() {
   // Lien direct #driver → ouvrir le tableau de bord conducteur (utile en démo/test)
@@ -42,8 +43,8 @@ export default function App() {
     return m
   }, [network])
 
-  async function search(fromPoi, toPoi) {
-    const p = await postJSON('/api/plan', { from_poi: fromPoi, to_poi: toPoi })
+  async function search(body) {
+    const p = await postJSON('/api/plan', body)
     setPlan(p)
     setSelected(p.itineraries[0])
     setView('results')
@@ -75,7 +76,7 @@ export default function App() {
             className={`tb-btn ${view === 'driver' ? 'tb-btn-active' : ''}`}
             onClick={toggleDriver}
           >
-            🚐 Mode conducteur
+            {view === 'driver' ? '👤 Mode passager' : '🚐 Mode conducteur'}
           </button>
           <button className="tb-btn" onClick={() => setFullscreen(!fullscreen)} title="Plein écran">
             {fullscreen ? '⤢' : '⛶'}
@@ -85,7 +86,15 @@ export default function App() {
 
       <main className="stage">
         <PhoneFrame fullscreen={fullscreen}>
-          {view === 'home' && <HomeView pois={pois} network={network} vehicles={vehicles} onSearch={search} />}
+          {view === 'home' && (
+            <HomeView
+              pois={pois}
+              network={network}
+              vehicles={vehicles}
+              onSearch={search}
+              onSpendings={() => setView('spendings')}
+            />
+          )}
           {view === 'results' && plan && (
             <ResultsView
               plan={plan}
@@ -118,10 +127,6 @@ export default function App() {
               vehicles={vehicles}
               stopMap={stopMap}
               onHome={() => setView('home')}
-              onDriver={() => {
-                setReturnTo('ticket')
-                setView('driver')
-              }}
               onReceipt={() => {
                 setAutoPrint(false)
                 setView('receipt')
@@ -142,11 +147,12 @@ export default function App() {
           {view === 'driver' && (
             <DriverView onBack={toggleDriver} network={network} vehicles={vehicles} />
           )}
+          {view === 'spendings' && <SpendingsView onBack={() => setView('home')} />}
         </PhoneFrame>
       </main>
 
       <footer className="page-footer">
-        Prototype de démonstration — données indicatives · paiements simulés (aucun débit
+        Prototype de démonstration : données indicatives · paiements simulés (aucun débit
         réel) · Fond de carte © OpenStreetMap contributors
       </footer>
     </div>

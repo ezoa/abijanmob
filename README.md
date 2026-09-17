@@ -11,10 +11,12 @@ QR mobile money + module financier conducteur, sur le corridor pilote
 
 ```
 abidjanmod/
-├── data/corpus/          # corpus pilote (20 arrêts, 12 lignes, tarifs) — indicatif
+├── data/corpus/          # corpus pilote (23 arrêts dont gares woro, 22 lignes) — indicatif
 ├── demo/
 │   ├── backend/          # API FastAPI · moteur d'itinéraires · live/ (flotte)
+│   │   ├── quartiers.py  # référentiel ~260 quartiers d'Abidjan (14 communes)
 │   │   ├── finance/      # module financier (factures, souches, taxes, FNE)
+│   │   ├── wallets/      # portefeuilles mobile money (paiement multi-comptes)
 │   │   └── tests/        # tests pytest (sans PostgreSQL)
 │   ├── frontend/         # démo web React (mode mobile automatique)
 │   │   └── scripts/      # cache des tuiles de carte (hors-ligne)
@@ -127,6 +129,21 @@ taxes** communales et étatiques (règles de démonstration configurables — au
 officiel codé en dur), **clôture journalière** idempotente, et une architecture prête
 pour une future intégration **FNE/RNE** (fournisseur simulé, jamais appelé).
 
+## Portefeuilles mobile money & bilans périodiques (démonstration)
+
+Le passager dispose d'un compte démo avec 4 **portefeuilles virtuels** (AbidjanMob-
+Wave, AbidjanMob-Orange Money, AbidjanMob-MTN MoMo, AbidjanMob-Moov Money ; soldes
+de départ : 400 · 600 · 500 · 500 F). **Aucun compte réel n'est accessible** : les
+opérateurs ne sont pas interopérables, et le code secret (4 chiffres, simulation)
+est un code AbidjanMob unique, pas celui de vos applications mobile money. On
+**recharge** chaque portefeuille depuis son vrai compte (simulation ; APIs PSP au
+MVP), puis on **répartit un paiement sur plusieurs comptes** : ex. 1 400 F =
+400 Wave + 600 Orange + 400 Moov. Validations strictes (somme exacte, soldes
+suffisants), débit atomique, journal des mouvements, ordre de priorité des comptes
+par glisser-déposer, écran d'aide « ? » pendant le paiement. Bilans périodiques :
+conducteur (jour/semaine/mois/trimestre dans « Ma caisse ») et passager
+(« 📊 Mes dépenses » sur l'accueil).
+
 - Guide complet : **`docs/module-financier.md`** · endpoints dans http://localhost:8000/docs
 - Dashboard conducteur → onglets **Ma caisse** (vue d'ensemble, souches, dépenses,
   taxes, clôture)
@@ -139,12 +156,14 @@ pour une future intégration **FNE/RNE** (fournisseur simulé, jamais appelé).
 ```bash
 make smoke               # ou : bash demo/smoke-test.sh (API directe :8000)
 make smoke-nginx         # via nginx (:8080)
-make test                # 23 tests pytest du module financier (sans PostgreSQL)
+make test                # 49 tests pytest (finance, quartiers, portefeuilles, bilans)
 ```
 
-`smoke` vérifie 11 points : API, corpus, POI, itinéraire phare, flotte en mouvement,
-ETA, paiement, dashboard conducteur, base analytics, Metabase en ligne et configuré.
-**Résultat attendu : 11/11 OK.**
+`smoke` vérifie 17 points : API, corpus, POI et quartiers, itinéraire phare, plan par
+arrêt direct (position actuelle), flotte en mouvement, ETA, paiement, dashboard
+conducteur, portefeuilles (déverrouillage, paiement réparti, débit et rechargement
+vérifiés), bilans périodiques (conducteur + passager), base analytics, Metabase en
+ligne et configuré. **Résultat attendu : 17/17 OK.**
 
 ### 2. Parcours manuel complet (au moins 2 fois avant le jour J)
 
@@ -155,13 +174,16 @@ Sur http://localhost:8080, suivre dans l'ordre — chaque point est un clic :
 3. **Option informelle** : chip « 🔴 … arrive à Riviera 2 dans ~X min » — le compte à
    rebours descend-il ?
 4. **Détails de l'itinéraire** : étapes, attente, marche, tarifs
-5. **Payer ce trajet** → Scanner le QR → conducteur Koffi → Wave → code (4 chiffres
-   quelconques) → billet numérique avec QR
+5. **Payer ce trajet** → Scanner le QR → conducteur Koffi → code secret du compte
+   (4 chiffres quelconques) → répartition entre vos comptes (soldes simulés : Wave,
+   Orange, MTN, Moov ; un seul compte suffit, le bouton « Remplir automatiquement »
+   propose la répartition) → billet numérique avec QR
 6. **Billet** : chip « Votre woro arrive dans ~X min » · bouton **« Voir le reçu »** →
    facture FAC-…, QR de vérification, badge « non certifié FNE — prototype » ·
    **Imprimer / PDF** (une page A4 propre) · **Partager**
-7. **👀 Voir côté conducteur** → « Ma caisse » : recettes live, position partagée,
-   cartes financières (vue d'ensemble)
+7. **🚐 Mode conducteur** (bouton du bandeau) → « Ma caisse » : la recette du
+   paiement apparaît en direct, position partagée, cartes financières (vue
+   d'ensemble) · **👤 Mode passager** pour revenir au billet
 8. **Onglet Souches** : détail décomposé (brut − frais − commissions − taxes = net) ·
    **Dépenses** : ajouter une dépense puis la supprimer (confirmation) ·
    **Clôture** : « Clôturer ma journée » puis re-cliquer (« déjà clôturée », pas de doublon)
@@ -172,7 +194,20 @@ Sur http://localhost:8080, suivre dans l'ordre — chaque point est un clic :
 
 - Autres trajets : *Yopougon Siporex → Zone 4* (multimodal, bateau-bus) ·
   *Treichville → Cité Administrative* (bateau direct, 200 F)
-- Inverser départ/destination (⇅) · les 4 opérateurs mobile money
+- Scénario gares woro : *Riviera Bonoumin → Treichville* → taxi communal jusqu'à
+  la gare Riviera 2 (200 F) puis woro DIRECT (800 F) = 1 000 F · option
+  « Marche + transport » (857 m à pied) · les taxis communaux 🚙 desservent les
+  gares (100 à 300 F)
+- Recherche par quartier : tapez « Angré », « Palmeraie », « Sikasso »… (271 lieux
+  et quartiers, arrêt de rattachement affiché) · « 📍 Position actuelle » en départ
+  (géolocalisation, arrêt le plus proche)
+- Inverser départ/destination (⇅) · répartir un paiement sur plusieurs comptes
+  mobile money quand un seul ne suffit pas (ex. 1 400 F = 400 Wave + 600 Orange + 400 Moov)
+- Recharger un compte (bouton +) depuis son « vrai » compte (simulation) ·
+  glisser-déposer les comptes pour changer la priorité de « Remplir
+  automatiquement » · bouton « ? » pendant le paiement : aide complète
+- « 📊 Mes dépenses de transport » sur l'accueil : bilan jour / semaine / mois /
+  trimestre côté passager · même sélecteur de période dans « Ma caisse » côté conducteur
 - Bouton ⛶ plein écran (projection) · **sur mobile** (cf. section ci-dessus)
 - Metabase : créer les questions du guide → refaire un paiement → ré-exécuter une
   requête → le paiement apparaît

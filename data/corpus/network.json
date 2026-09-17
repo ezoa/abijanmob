@@ -1,7 +1,7 @@
 {
   "meta": {
     "name": "Corpus pilote AbidjanMob — corridor Cocody–Plateau–Adjamé",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "date": "2026-09-14",
     "disclaimer": "DONNÉES INDICATIVES établies pour le prototype de démonstration (tracés, arrêts, tarifs et fréquences approximatifs). À remplacer par les enquêtes terrain de M0 (octobre 2026). Fond de carte : © OpenStreetMap contributors."
   },
@@ -16,10 +16,13 @@
     {"id": "st_riviera3", "name": "Riviera 3", "commune": "Cocody", "lat": 5.3635, "lon": -3.9415, "kind": "stop"},
     {"id": "st_angre2", "name": "Angré 2e Tranche", "commune": "Cocody", "lat": 5.3935, "lon": -3.9560, "kind": "stop"},
     {"id": "st_angre7", "name": "Angré 7e Tranche", "commune": "Cocody", "lat": 5.4150, "lon": -3.9480, "kind": "stop"},
-    {"id": "st_cocody_mairie", "name": "Cocody Mairie", "commune": "Cocody", "lat": 5.3510, "lon": -3.9865, "kind": "stop"},
+    {"id": "st_cocody_mairie", "name": "Cocody Mairie", "commune": "Cocody", "lat": 5.3510, "lon": -3.9865, "kind": "hub"},
     {"id": "st_chateau", "name": "Château", "commune": "Cocody", "lat": 5.3470, "lon": -3.9900, "kind": "stop"},
     {"id": "st_2plt_vallon", "name": "II Plateaux Vallon", "commune": "Cocody", "lat": 5.3620, "lon": -3.9890, "kind": "stop"},
     {"id": "st_2plt_sicogi", "name": "II Plateaux Sicogi", "commune": "Cocody", "lat": 5.3705, "lon": -3.9960, "kind": "stop"},
+    {"id": "st_bonoumin", "name": "Riviera Bonoumin", "commune": "Cocody", "lat": 5.3647, "lon": -3.9726, "kind": "hub"},
+    {"id": "st_gare_anono", "name": "Gare Anono", "commune": "Cocody", "lat": 5.3421, "lon": -3.9736, "kind": "hub"},
+    {"id": "st_gare_9kilo", "name": "Gare 9 Kilo", "commune": "Cocody", "lat": 5.3660, "lon": -3.9380, "kind": "hub"},
     {"id": "st_abobo_gare", "name": "Gare d'Abobo", "commune": "Abobo", "lat": 5.4210, "lon": -4.0200, "kind": "hub"},
     {"id": "st_abobo_baoule", "name": "Abobo Baoulé", "commune": "Abobo", "lat": 5.4380, "lon": -4.0215, "kind": "stop"},
     {"id": "st_yopougon_siporex", "name": "Yopougon Siporex", "commune": "Yopougon", "lat": 5.3350, "lon": -4.0860, "kind": "hub"},
@@ -39,7 +42,17 @@
     {"id": "wo_plateau", "mode": "woro", "name": "Woro Plateau", "fare": 200, "headway_min": 5, "stops": ["st_adjamme_gare", "st_adjamme_220", "st_plateau_cite", "st_plateau_ruecommerce"]},
     {"id": "so_l105", "mode": "sotra", "name": "SOTRA L105 Angré – Plateau", "fare": 300, "headway_min": 15, "stops": ["st_angre7", "st_angre2", "st_riviera2", "st_cocody_mairie", "st_plateau_cite", "st_plateau_jardins"]},
     {"id": "so_l31", "mode": "sotra", "name": "SOTRA L31 Yopougon – Plateau", "fare": 300, "headway_min": 12, "stops": ["st_yopougon_siporex", "st_attiecoube", "st_adjamme_220", "st_plateau_cite", "st_plateau_ruecommerce"]},
-    {"id": "bb_treichville_plateau", "mode": "bateau", "name": "Bateau-bus Treichville – Plateau", "fare": 200, "headway_min": 20, "stops": ["st_treichville_gare", "st_plateau_jardins"]}
+    {"id": "bb_treichville_plateau", "mode": "bateau", "name": "Bateau-bus Treichville – Plateau", "fare": 200, "headway_min": 20, "stops": ["st_treichville_gare", "st_plateau_jardins"]},
+    {"id": "tc_riviera1_bonoumin", "mode": "taxi_communal", "name": "Taxi communal Riviera 1 – Bonoumin", "fare": 100, "headway_min": 5, "stops": ["st_riviera1", "st_bonoumin"]},
+    {"id": "tc_bonoumin_riviera2", "mode": "taxi_communal", "name": "Taxi communal Bonoumin – Riviera 2", "fare": 200, "headway_min": 6, "stops": ["st_bonoumin", "st_riviera2"]},
+    {"id": "tc_bonoumin_9kilo", "mode": "taxi_communal", "name": "Taxi communal Bonoumin – Gare 9 Kilo", "fare": 300, "headway_min": 8, "stops": ["st_bonoumin", "st_gare_9kilo"]},
+    {"id": "tc_anono_riviera2", "mode": "taxi_communal", "name": "Taxi communal Anono – Riviera 2", "fare": 200, "headway_min": 7, "stops": ["st_gare_anono", "st_riviera2"]},
+    {"id": "tc_cocody_riviera2", "mode": "taxi_communal", "name": "Taxi communal Cocody Mairie – Riviera 2", "fare": 300, "headway_min": 8, "stops": ["st_cocody_mairie", "st_riviera1", "st_riviera2"]},
+    {"id": "wo_riviera2_treichville", "mode": "woro", "name": "Woro Riviera 2 – Treichville (direct)", "fare": 800, "headway_min": 10, "stops": ["st_riviera2", "st_treichville_gare"]},
+    {"id": "wo_9kilo_treichville", "mode": "woro", "name": "Woro 9 Kilo – Treichville (direct)", "fare": 1000, "headway_min": 12, "stops": ["st_gare_9kilo", "st_treichville_gare"]},
+    {"id": "wo_riviera2_zone4", "mode": "woro", "name": "Woro Riviera 2 – Zone 4 (direct)", "fare": 700, "headway_min": 12, "stops": ["st_riviera2", "st_marcory_z4"]},
+    {"id": "gb_9kilo_yopougon", "mode": "gbaka", "name": "Gbaka 9 Kilo – Yopougon (direct)", "fare": 1000, "headway_min": 15, "stops": ["st_gare_9kilo", "st_yopougon_siporex"]},
+    {"id": "wo_anono_adjamme", "mode": "woro", "name": "Woro Anono – Adjamé (direct)", "fare": 500, "headway_min": 10, "stops": ["st_gare_anono", "st_adjamme_gare"]}
   ],
   "pois": [
     {"id": "riviera3", "label": "Riviera 3", "commune": "Cocody", "stop_id": "st_riviera3"},
@@ -55,7 +68,10 @@
     {"id": "zone4", "label": "Zone 4", "commune": "Marcory", "stop_id": "st_marcory_z4"},
     {"id": "treichville", "label": "Gare lagune (Treichville)", "commune": "Treichville", "stop_id": "st_treichville_gare"},
     {"id": "abobo_gare", "label": "Gare d'Abobo", "commune": "Abobo", "stop_id": "st_abobo_gare"},
-    {"id": "siporex", "label": "Yopougon Siporex", "commune": "Yopougon", "stop_id": "st_yopougon_siporex"}
+    {"id": "siporex", "label": "Yopougon Siporex", "commune": "Yopougon", "stop_id": "st_yopougon_siporex"},
+    {"id": "bonoumin", "label": "Riviera Bonoumin", "commune": "Cocody", "stop_id": "st_bonoumin"},
+    {"id": "gare_anono", "label": "Gare Anono", "commune": "Cocody", "stop_id": "st_gare_anono"},
+    {"id": "gare_9kilo", "label": "Gare 9 Kilo", "commune": "Cocody", "stop_id": "st_gare_9kilo"}
   ],
   "drivers": [
     {"id": "drv_001", "name": "Koffi Assamoi", "vehicle": "Gbaka — immatriculation prototype", "line_id": "gb_riviera_adjamme"},

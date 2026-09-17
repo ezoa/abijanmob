@@ -30,14 +30,20 @@ stops=${n#* }
 check "Corpus réseau ($lines lignes / $stops arrêts)" $?
 
 n=$(curl -sf "$API/api/pois" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))" 2>/dev/null)
-[ "${n:-0}" -ge 13 ]
-check "POI de recherche ($n lieux)" $?
+[ "${n:-0}" -ge 250 ]
+check "POI de recherche ($n lieux et quartiers)" $?
 
 n=$(curl -sf -X POST "$API/api/plan" -H 'Content-Type: application/json' \
   -d '{"from_poi":"riviera2","to_poi":"cite_administrative"}' |
   python3 -c "import json,sys; print(len(json.load(sys.stdin)['itineraries']))" 2>/dev/null)
 [ "${n:-0}" -ge 3 ]
 check "Itinéraire phare Riviera 2 → Cité Administrative ($n options)" $?
+
+n=$(curl -sf -X POST "$API/api/plan" -H 'Content-Type: application/json' \
+  -d '{"from_stop":"st_riviera2","to_poi":"cite_administrative"}' |
+  python3 -c "import json,sys; print(len(json.load(sys.stdin)['itineraries']))" 2>/dev/null)
+[ "${n:-0}" -ge 3 ]
+check "Plan par arrêt direct / position actuelle ($n options)" $?
 
 python3 - "$API" <<'EOF'
 import json, sys, time, urllib.request
@@ -70,6 +76,42 @@ total=$(curl -sf "$API/api/driver/drv_001/receipts" |
   python3 -c "import json,sys; print(json.load(sys.stdin)['total'])" 2>/dev/null)
 [ "${total:-0}" -ge 4400 ]
 check "Dashboard conducteur (recettes du jour : ${total} F)" $?
+
+# Portefeuilles (simulation) : reset, déverrouillage par code, paiement réparti, débit vérifié
+curl -sf -X POST "$API/api/wallets/reset" >/dev/null
+bal=$(curl -sf -X POST "$API/api/wallets/unlock" -H 'Content-Type: application/json' \
+  -d '{"pin":"1234"}' |
+  python3 -c "import json,sys; print(json.load(sys.stdin)['balances']['wave']['balance'])" 2>/dev/null)
+[ -n "${bal:-}" ]
+check "Portefeuilles déverrouillés par code (Wave : ${bal} F)" $?
+
+tid2=$(curl -sf -X POST "$API/api/payments" -H 'Content-Type: application/json' \
+  -d '{"line_name":"Woro Riviera","mode":"woro","fare":300,"driver_id":"drv_001","splits":[{"provider":"wave","amount":200},{"provider":"orange","amount":100}]}' |
+  python3 -c "import json,sys; print(json.load(sys.stdin)['ticket_id'])" 2>/dev/null)
+[ -n "${tid2:-}" ]
+check "Paiement réparti multi-portefeuilles ($tid2 : 200 Wave + 100 Orange)" $?
+
+bal2=$(curl -sf -X POST "$API/api/wallets/unlock" -H 'Content-Type: application/json' \
+  -d '{"pin":"1234"}' |
+  python3 -c "import json,sys; print(json.load(sys.stdin)['balances']['wave']['balance'])" 2>/dev/null)
+[ "${bal2:-x}" = "$((bal - 200))" ]
+check "Débit des portefeuilles vérifié (Wave : ${bal} → ${bal2} F)" $?
+
+bal3=$(curl -sf -X POST "$API/api/wallets/topup" -H 'Content-Type: application/json' \
+  -d '{"pin":"1234","provider":"wave","amount":1000}' |
+  python3 -c "import json,sys; print(json.load(sys.stdin)['balances']['wave']['balance'])" 2>/dev/null)
+[ "${bal3:-x}" = "$((bal2 + 1000))" ]
+check "Rechargement de portefeuille (Wave : ${bal2} → ${bal3} F)" $?
+
+ok=$(curl -sf "$API/api/driver/drv_001/financial-summary" |
+  python3 -c "import json,sys; d=json.load(sys.stdin); print(all(k in d for k in ('today','week','month','quarter')))" 2>/dev/null)
+[ "${ok:-}" = "True" ]
+check "Bilan périodique conducteur (jour/semaine/mois/trimestre)" $?
+
+ok=$(curl -sf "$API/api/wallets/spending-summary" |
+  python3 -c "import json,sys; d=json.load(sys.stdin)['periods']; print(all(k in d for k in ('day','week','month','quarter','all')))" 2>/dev/null)
+[ "${ok:-}" = "True" ]
+check "Bilan périodique passager « Mes dépenses »" $?
 
 if docker compose exec -T db sh -c 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"' >/dev/null 2>&1; then
   n=$(docker compose exec -T db sh -c \

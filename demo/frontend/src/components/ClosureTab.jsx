@@ -31,8 +31,8 @@ export default function ClosureTab() {
       })
       setMessage(
         r.already_closed
-          ? 'Journée déjà clôturée — aucun doublon créé.'
-          : `Journée clôturée ✓ ${r.closure_number} — résultat net estimé ${fmtF(r.estimated_net_income)}`
+          ? 'Journée déjà clôturée. Aucun doublon créé.'
+          : `Journée clôturée ✓ ${r.closure_number} · résultat net estimé ${fmtF(r.estimated_net_income)}`
       )
       load()
     } catch {

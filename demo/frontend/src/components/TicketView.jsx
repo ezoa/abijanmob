@@ -5,7 +5,7 @@ import { fmtF } from '../api.js'
 
 function ticketShareText(ticket) {
   return (
-    `Billet AbidjanMob ${ticket.ticket_id} — ${fmtF(ticket.fare)}` +
+    `Billet AbidjanMob ${ticket.ticket_id} · ${fmtF(ticket.fare)}` +
     ` · ${ticket.line_name} · payé avec ${ticket.provider} (simulation)`
   )
 }
@@ -16,7 +16,6 @@ export default function TicketView({
   vehicles,
   stopMap,
   onHome,
-  onDriver,
   onReceipt,
   onPrint,
 }) {
@@ -39,7 +38,7 @@ export default function TicketView({
         await navigator.clipboard.writeText(text)
         setShared('Copié dans le presse-papiers ✓')
       } catch {
-        setShared('Copie impossible — notez ' + ticket.ticket_id)
+        setShared('Copie impossible. Notez ' + ticket.ticket_id)
       }
     }
     setTimeout(() => setShared(''), 4000)
@@ -70,6 +69,14 @@ export default function TicketView({
           <span>Payé avec</span>
           <b>{ticket.provider}</b>
         </div>
+        {(ticket.splits || []).length > 1 && (
+          <div className="tk-row">
+            <span>Répartition</span>
+            <b className="tnum">
+              {ticket.splits.map((s) => `${s.provider} ${fmtF(s.amount)}`).join(' + ')}
+            </b>
+          </div>
+        )}
         <div className="tk-row">
           <span>Heure</span>
           <b>{ticket.time_hm}</b>
@@ -86,7 +93,7 @@ export default function TicketView({
             <b className="tnum">{fmtF(ticket.financial.net_amount)}</b>
           </div>
         )}
-        <div className="tk-note">Billet numérique — présentez-le en cas de contrôle.</div>
+        <div className="tk-note">Billet numérique. Présentez-le en cas de contrôle.</div>
       </div>
 
       {hasLive && firstRide && (
@@ -103,11 +110,8 @@ export default function TicketView({
       {shared && <div className="tk-shared">{shared}</div>}
 
       <div className="tk-actions">
-        <button className="btn-ghost" onClick={onHome}>
+        <button className="btn-go" onClick={onHome}>
           Nouvelle recherche
-        </button>
-        <button className="btn-go" onClick={onDriver}>
-          👀 Voir côté conducteur
         </button>
       </div>
       {ticket.document_id && (

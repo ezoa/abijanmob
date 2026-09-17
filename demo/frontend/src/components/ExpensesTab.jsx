@@ -173,7 +173,7 @@ export default function ExpensesTab() {
           <div key={e.id} className="exp-row">
             <span className="exp-cat">{CAT_LABEL[e.category] || e.category}</span>
             <span className="exp-desc" title={e.description}>
-              {e.description || '—'}
+              {e.description || '(non renseignée)'}
             </span>
             <span className="exp-date">{fmtDate(e.expense_date)}</span>
             <span className="exp-amt tnum">−{fmtF(e.amount)}</span>
@@ -200,7 +200,7 @@ export default function ExpensesTab() {
         ))}
       </div>
       <div className="tab-note">
-        Référence de justificatif saisie manuellement — aucun fichier n'est stocké
+        Référence de justificatif saisie manuellement : aucun fichier n'est stocké
         par le prototype.
       </div>
     </div>

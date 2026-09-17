@@ -453,3 +453,173 @@ Cahier des charges intégral respecté ; documentation dédiée : `docs/module-f
 - Dépenses : pas d'upload de fichier, référence justificatif saisie manuellement.
 - Une souche confirmée n'est jamais modifiable : correction = annulation/remboursement/
   avoir, non implémenté dans ce lot (mention affichée dans le détail de souche).
+
+## Recherche par quartiers, portefeuilles multi-comptes, bilans périodiques (17/09/2026)
+
+Deux grandes fonctionnalités demandées + trois observations, implémentées en quatre
+chantiers avec tests à chaque étape. Approche : étude du code d'abord (architecture
+cartographiée), puis chantiers du plus sûr au plus structurant.
+
+### Chantier 1 : quick wins UI
+
+- Suppression des tirets cadratins « — » de tous les textes affichés (~37 chaînes :
+  frontend + résumés d'itinéraires du moteur, libellés des règles fiscales, messages
+  de clôture). Les commentaires/docstrings du code ne sont pas affichés : intouchés.
+- Bouton « Mode conducteur » : libellé dynamique orienté action (« 🚐 Mode
+  conducteur » ↔ « 👤 Mode passager »), cohérent avec le bouton plein écran.
+
+### Chantier 2 : recherche exhaustive + position actuelle (Idée 1)
+
+- Nouveau module `quartiers.py` : référentiel ~260 quartiers / 14 communes du Grand
+  Abidjan (fourni par l'équipe produit, porté depuis un référentiel TypeScript :
+  normalisation des accents, noms canoniques, dédoublonnage, la base prime sur les
+  entrées complémentaires).
+- Rattachement de chaque quartier à un arrêt du corpus : règles nommées (Riviera,
+  Angré, II Plateaux, Zone 4, gares...), sinon arrêt de la commune le plus proche du
+  centre de commune, sinon arrêt le plus proche global (Koumassi, Port-Bouët, Songon,
+  Anyama, Bingerville, Brofodoumé n'ont pas d'arrêt). L'arrêt de rattachement est
+  affiché dans l'UI (transparence).
+- Fusion dans `Network.pois` : 269 POI au total, les 14 POI du corpus priment.
+- `/api/plan` accepte en plus `from_stop`/`to_stop` (additif, contrat préservé) : la
+  position actuelle géolocalisée côté client (navigator.geolocation → arrêt le plus
+  proche, calcul local, fonctionne hors-ligne) planifie par arrêt direct.
+- Frontend : les listes déroulantes deviennent des champs avec autocomplétion
+  (insensible aux accents/casse, navigation clavier) + entrée « 📍 Position
+  actuelle » en tête du départ (une liste native de 269 entrées est inutilisable).
+
+### Chantier 3 : portefeuilles multi-comptes (Idée 2)
+
+- Nouveau package `wallets/`, même architecture que finance/ (models, store
+  mémoire+PostgreSQL, façade best-effort, routeur). Soldes de départ volontairement
+  modestes (Wave 400 · Orange 600 · MTN 500 · Moov 500) : la répartition s'impose
+  naturellement, ex. 1 400 F exige plusieurs comptes.
+- `POST /api/wallets/unlock` : les soldes ne sortent jamais sans code secret
+  (4 chiffres quelconques, simulation, cohérent avec le code de paiement).
+  `POST /api/wallets/reset` (réinitialisation démo), `GET /api/wallets/transactions`.
+- `POST /api/payments` accepte en plus `splits: [{provider, amount}]` : le champ
+  `provider` seul reste le chemin historique inchangé (contrat gelé, test dédié
+  vert). Validations strictes : somme = montant exact, opérateur unique, solde
+  suffisant (refus 400 explicite). Débit atomique (`UPDATE ... WHERE balance >= x`
+  tout ou rien, journal dans la même transaction). Pannes de store = best-effort
+  (le paiement ne s'arrête jamais), refus métier = 400.
+- Clé `multi` + libellé combiné (« Wave + Orange Money ») pour le module financier
+  et analytics (colonnes texte libres, aucun taux ni liste fixe impliqués).
+- Frontend PaymentView : scan → conducteur → déverrouillage par code → répartition
+  (soldes affichés, montants modifiables, remplissage automatique, total vs à
+  payer, réinitialisation) → traitement. Billet : ligne « Répartition » si
+  multi-comptes.
+
+### Chantier 4 : bilans périodiques
+
+- Conducteur : `financial-summary` étendu de façon additive (jour inchangé +
+  semaine / mois / trimestre, mêmes champs par période). Sélecteur de période dans
+  la Vue d'ensemble de « Ma caisse ».
+- Passager : `GET /api/wallets/spending-summary` + écran « 📊 Mes dépenses » depuis
+  l'accueil (totaux, paiements, ticket moyen, répartition par opérateur, derniers
+  mouvements), alimenté par le journal des portefeuilles + un historique seedé de
+  8 paiements sur 6 jours (idempotent, soldes reconstitués pour retomber
+  exactement sur les soldes actuels).
+
+### Vérifications
+
+- `make lint` / `make format-check` : 22 fichiers conformes ✓
+- `make test` : **44 passed** (23 initiaux + 8 quartiers + 10 portefeuilles +
+  3 bilans, tout en mémoire sans PostgreSQL) ✓
+- `make restart` (corpus + module wallets copiés dans l'image api) puis
+  `make smoke` : **16/16 OK**, dont paiement réparti 200 Wave + 100 Orange avec
+  débit vérifié en base PostgreSQL (Wave 400 → 200 F), plan par arrêt direct /
+  position actuelle, bilans périodiques conducteur et passager ✓
+- Contrats préservés : tests legacy (paiement, souches, reçus) verts, smoke du
+  paiement historique inchangé ✓
+
+### Décisions notables
+
+- Les portefeuilles sont un compte SIMULÉ interne à la démo : aucun compte mobile
+  money réel n'est accessible. Dans le MVP, les adaptateurs PSP (clés réservées
+  dans .env.example) exécuteront chaque prélèvement avec le consentement de
+  l'utilisateur, validé dans son application opérateur : AbidjanMob orchestre,
+  les PSP exécutent.
+- Code d'accès aux soldes : 4 chiffres quelconques (simulation), comme le code de
+  paiement existant, pour éviter toute friction le jour J.
+- Un paiement réparti écrit UNE seule ligne analytics `payments` (provider =
+  libellé combiné) : les requêtes Metabase « revenus par opérateur » verront une
+  tranche « Wave + Orange Money » ; le détail par opérateur vit dans
+  `wallet_transactions`.
+- L'historique passager seedé ne débite pas les soldes actuels : il reconstitue
+  les soldes « avant » pour retomber exactement sur les soldes initiaux.
+- Rattachement quartier → arrêt : indicatif (comme tout le corpus), arrêt affiché
+  dans l'UI ; les règles nommées priment sur la distance au centre de commune.
+
+## Gares woro, taxis communaux, marche + rechargement des portefeuilles (17/09/2026, suite)
+
+Retours d'utilisateur après test réel : trois chantiers.
+
+### Réseau réaliste : gares, taxis communaux, marche
+
+- Diagnostic du signalement « position à Riviera Bonoumin détectée Riviera 1 » :
+  la géolocalisation fonctionnait (arrêt le plus proche parmi les 20 du corpus,
+  Riviera 1 à ~850 m), mais le corpus n'avait pas d'arrêt à Bonoumin, et la règle
+  de rattachement envoyait le quartier vers Riviera 3. Les noms du référentiel
+  fourni étaient bien tous intégrés.
+- Arrêts ajoutés aux positions OpenStreetMap (Nominatim) : Riviera Bonoumin
+  (5.3647, -3.9726), Gare Anono (5.3421, -3.9736) ; Gare 9 Kilo (Angré) placée de
+  façon indicative (absent d'OSM, gare informelle). Cocody Mairie devient hub :
+  4 gares à Cocody (9 Kilo, Riviera 2, Anono, Cocody centre).
+- Nouveau mode « taxi communal » (30 km/h, informel) : navettes à coût réduit vers
+  les gares (100 à 300 F). Exclu du suivi en direct (flotte = gbakas + woros) et
+  ajouté aux dictionnaires du seed analytics.
+- Woro/gbaka DIRECTS inter-gares, conformes au modèle réel (hub-and-spoke : pas de
+  transit inter-communes en véhicule en commun) : Riviera 2 → Treichville 800 F,
+  9 Kilo → Treichville 1 000 F, Riviera 2 → Zone 4, 9 Kilo → Yopougon,
+  Anono → Adjamé.
+- Nouvelle passe Dijkstra « sans taxi communal » : fait émerger l'option
+  « Marche + transport » (rejoindre l'arrêt ou la gare à pied, tag dédié).
+- Rattachements corrigés : Riviera Bonoumin → arrêt Bonoumin (et non Riviera 3),
+  Anono → Gare Anono, 9 kilo → Gare 9 Kilo.
+- Scénario vérifié en direct : Bonoumin → Treichville = taxi communal (200 F) +
+  woro direct (800 F) = 1 000 F [Le plus rapide] · marche 857 m + transports
+  [Marche + transport] · taxi 1 950 F.
+
+### Affichage « Mes dépenses »
+
+- Date et heure compactes sur une seule ligne (« 17/09 · 14:30 »), police réduite,
+  grille adaptée (la colonne temps était calée sur « 07:05 »).
+
+### Portefeuilles : rechargement + pédagogie
+
+- Modèle explicité et confirmé : comptes VIRTUELS AbidjanMob-Wave / AbidjanMob-
+  Orange Money / etc. Le code secret est un code AbidjanMob unique, jamais les
+  codes des opérateurs (aucune interopérabilité réelle). Dans le MVP, les APIs
+  PSP rechargeront les portefeuilles virtuels depuis les vrais comptes, avec
+  validation dans l'application de l'opérateur.
+- `POST /api/wallets/topup {pin, provider, amount}` : crédite le portefeuille,
+  journal kind='topup', message « Rechargement simulé depuis votre compte X
+  réel : +N F sur AbidjanMob-X ». Les bilans « Mes dépenses » ignorent les
+  rechargements (ce ne sont pas des dépenses de transport).
+- Frontend paiement : bouton « + » par compte (rechargement inline), comptes
+  renommés « AbidjanMob-Wave » etc., glisser-déposer pour réordonner la priorité
+  de prélèvement (ordre persisté sur l'appareil), tooltips sur « Remplir
+  automatiquement » (ordre d'affichage haut → bas) et « Réinitialiser les
+  soldes » (libellé sans « (démo) »), bouton « ? » ouvrant un écran d'aide
+  complet (comptes virtuels, code secret, rechargement, priorités).
+
+### Vérifications
+
+- `make lint` / `make format-check` : 22 fichiers conformes ✓
+- `make test` : **49 passed** (+1 scénario Bonoumin → Treichville, +3
+  rechargement, +1 bilans/rechargement) ✓
+- `make restart` + `make smoke` : **17/17 OK** (22 lignes / 23 arrêts / 271 POI,
+  rechargement vérifié en base : Wave 200 → 1 200 F) ✓
+
+## Corrections après revue (17/09/2026, fin de journée)
+
+- Bouton « 👀 Voir côté conducteur » retiré de l'écran billet : redondant avec la
+  bascule « Mode conducteur » du bandeau (substitut temporaire aux futurs comptes
+  passager/conducteur). La bascule conserve le retour au billet (returnTo) et
+  affiche le libellé dynamique « 👤 Mode passager ». Parcours du README, script
+  jury (scénario-démo.md, étape paiement actualisée : code AbidjanMob puis
+  répartition) et module-financier.md mis à jour. « Nouvelle recherche » devient
+  l'action principale de l'écran billet.
+- « Gare 9 Kilo (Angré) » renommée **Gare 9 Kilo** et déplacée près de l'arrêt
+  Riviera 3 (5.3660, -3.9380, à ~480 m à pied) : 9 Kilo est un quartier de la
+  Riviera 3, pas d'Angré (correction utilisateur).

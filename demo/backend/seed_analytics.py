@@ -25,10 +25,10 @@ SEED = 42
 DAYS = 14
 OPEN_HOUR, CLOSE_HOUR = 6, 21  # heures de service
 DETOUR = 1.15
-SPEED = {"sotra": 20.0, "bateau": 14.0, "gbaka": 18.0, "woro": 24.0}
-FORMAL = {"sotra": True, "bateau": True, "gbaka": False, "woro": False}
-BASE_BOARD = {"sotra": 18, "bateau": 8, "gbaka": 6, "woro": 4}
-ADOPTION = {"sotra": 0.22, "bateau": 0.18, "gbaka": 0.10, "woro": 0.08}
+SPEED = {"sotra": 20.0, "bateau": 14.0, "gbaka": 18.0, "woro": 24.0, "taxi_communal": 30.0}
+FORMAL = {"sotra": True, "bateau": True, "gbaka": False, "woro": False, "taxi_communal": False}
+BASE_BOARD = {"sotra": 18, "bateau": 8, "gbaka": 6, "woro": 4, "taxi_communal": 3}
+ADOPTION = {"sotra": 0.22, "bateau": 0.18, "gbaka": 0.10, "woro": 0.08, "taxi_communal": 0.06}
 PROVIDERS = [("Wave", 0.45), ("Orange Money", 0.35), ("MTN MoMo", 0.12), ("Moov Money", 0.08)]
 
 DDL_STATEMENTS = [
