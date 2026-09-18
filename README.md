@@ -7,10 +7,57 @@ QR mobile money + module financier conducteur, sur le corridor pilote
 > ⚠️ Prototype : données indicatives, paiements **simulés** (aucun argent réel),
 > frais/commissions/taxes de démonstration, FNE/RNE simulée.
 
+## Fonctionnalités
+
+### Information multimodale (passager)
+
+- **Recherche d'itinéraires** sur le corridor : 23 arrêts, 22 lignes, 6 modes
+  (SOTRA, bateau-bus, gbaka, woro-woro, taxi communal, taxi)
+- **5 profils de trajet** calculés en parallèle : rapide, économique, formel
+  (SOTRA/bateau), informel (gbaka/woro/taxi communal) et une option
+  « Marche + transport » (sans taxi communal)
+- **Recherche par quartier** : ~260 quartiers sur 14 communes (Angré, Palmeraie,
+  Sikasso…), chacun rattaché à son arrêt · **« 📍 Position actuelle »** par
+  géolocalisation (arrêt le plus proche)
+- **Gares woro-woro** : hub inter-quartiers (Riviera 2, 9 Kilo, Anono, Bonoumin…)
+  avec lignes directes inter-communes et dessertes par taxis communaux (100 à 300 F)
+- **Flotte en direct** : véhicules qui circulent sur la carte (simulation ×4) +
+  compte à rebours d'approche à l'arrêt
+
+### Paiement mobile money (simulation)
+
+- **Portefeuilles virtuels** AbidjanMob-Wave / Orange Money / MTN MoMo / Moov Money
+  (soldes de départ 400 · 600 · 500 · 500 F), aucun compte réel n'est accessible
+- **Paiement réparti sur plusieurs comptes** : ex. 1 400 F = 400 Wave + 600 Orange +
+  400 Moov · remplissage automatique selon l'ordre de priorité défini par
+  glisser-déposer
+- **Rechargement** de chaque portefeuille depuis son « vrai » compte (simulation) ·
+  code secret AbidjanMob à 4 chiffres · débit atomique · journal des mouvements ·
+  écran d'aide « ? » pendant le paiement
+- **Billet numérique** avec QR, suivi d'approche du véhicule, et **reçu**
+  imprimable/partageable avec QR de vérification
+
+### Outils conducteur
+
+- **Ma caisse** : recettes du jour en direct, répartition par opérateur, position
+  partagée
+- **Bilans périodiques** : jour / semaine / mois / trimestre (conducteur dans
+  « Ma caisse », passager via « 📊 Mes dépenses »)
+- **Souches numériques** (brut − frais − commissions − taxes = net), **dépenses**
+  (13 catégories), **estimation fiscale** à règles configurables, **clôture
+  journalière** idempotente
+
+### Données pour les décideurs
+
+- **Chaque paiement génère une donnée structurée** (ligne, tarif, heure, position) :
+  le produit « données anonymisées » de Phase 2 (AMUGA, SOTRA, urbanistes)
+- **Metabase** inclus : tableaux de bord à configurer en 2 min (profils horaires,
+  top arrêts, recettes par opérateur)
+
 ## Structure
 
 ```
-abidjanmod/
+abidjanmob/
 ├── data/corpus/          # corpus pilote (23 arrêts dont gares woro, 22 lignes) — indicatif
 ├── demo/
 │   ├── backend/          # API FastAPI · moteur d'itinéraires · live/ (flotte)
@@ -21,7 +68,7 @@ abidjanmod/
 │   ├── frontend/         # démo web React (mode mobile automatique)
 │   │   └── scripts/      # cache des tuiles de carte (hors-ligne)
 │   ├── demo.sh           # lancement local sans docker
-│   └── smoke-test.sh     # test de fumée (11 vérifications)
+│   └── smoke-test.sh     # test de fumée (17 vérifications)
 ├── docs/                 # plans, journal, scénario jury, Metabase, finance
 ├── docker-compose.yml    # api · nginx · db · db-init · metabase · tiles-init
 └── Makefile              # gestion de la stack + qualité + tests
